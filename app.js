@@ -1,3 +1,4 @@
+// app.js
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -18,15 +19,29 @@ db.authenticate()
   .then(() => console.log('Database connected...'))
   .catch(err => console.log('Error: ' + err));
 
+  // Tích hợp Swagger
+const swaggerJsdoc = require('swagger-jsdoc');
+const swaggerUi = require('swagger-ui-express');
+const swaggerOptions = require('./config/swaggerOptions');
+
+const swaggerSpec = swaggerJsdoc(swaggerOptions);
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
+// Đồng bộ model với database (nếu cần, chỉ dùng trong development)
+db.sync()
+  .then(() => console.log('All models were synchronized successfully'))
+  .catch(err => console.log('Sync error:', err));
+
 // Routes
 app.get('/', (req, res) => {
   res.send('First Aid App API is running');
 });
 
-// Định nghĩa routes
-// app.use('/api/auth', require('./routes/authRoutes'));
+// Đăng ký và đăng nhập
+app.use('/api/auth', require('./routes/authRoutes'));
+
+// Các routes khác có thể thêm ở đây...
 // app.use('/api/guides', require('./routes/guideRoutes'));
-// Thêm các routes khác khi cần
 
 // Error handling middleware
 app.use((err, req, res, next) => {
