@@ -44,6 +44,7 @@ app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/posts', require('./routes/postRoutes'));
 app.use('/api/likes', require('./routes/likeRoutes'));
 app.use('/api/comments', require('./routes/commentRoutes'));
+app.use('/api/news', require('./routes/newsRoutes'));
 
 // Các routes khác có thể thêm ở đây...
 // app.use('/api/guides', require('./routes/guideRoutes'));

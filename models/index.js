@@ -3,7 +3,9 @@ const User = require('./User');
 const Post = require('./post.model');
 const Comment = require('./comment.model');
 const Like = require('./like.model');
-const PostMedia = require('./postMedia.model'); // Giả sử bạn đã tạo model cho PostMedia
+const PostMedia = require('./postMedia.model'); 
+const News = require('./news.model');
+const NewsMedia = require('./newsMedia.model');
 
 /**
  * Thiết lập Association:
@@ -37,11 +39,21 @@ PostMedia.belongsTo(Post, { foreignKey: 'post_id', as: 'post' });
 // User.hasMany(PostMedia, { foreignKey: 'user_id', as: 'uploadMedia' });
 // PostMedia.belongsTo(User, { foreignKey: 'user_id', as: 'uploader' });
 
+// Một User (author) có nhiều News
+User.hasMany(News, { foreignKey: 'author_id', as: 'news' });
+News.belongsTo(User, { foreignKey: 'author_id', as: 'author' });
+
+// Một News có nhiều NewsMedia
+News.hasMany(NewsMedia, { foreignKey: 'news_id', as: 'media' });
+NewsMedia.belongsTo(News, { foreignKey: 'news_id', as: 'news' });
+
 // Export các model sau khi associations đã được thiết lập
 module.exports = {
   User,
   Post,
   Comment,
   Like,
-  PostMedia
+  PostMedia,
+  News, 
+  NewsMedia
 };
