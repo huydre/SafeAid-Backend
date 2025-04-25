@@ -1,5 +1,7 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/db');
+const Question = require('./question.model');
+const Answer = require('./answer.model');
 
 const UserAnswer = sequelize.define(
   'UserAnswer',
@@ -8,15 +10,7 @@ const UserAnswer = sequelize.define(
       type: DataTypes.STRING(255),
       primaryKey: true,
     },
-    is_correct: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-    },
     user_id: {
-      type: DataTypes.STRING(255),
-      allowNull: false,
-    },
-    answer_id: {
       type: DataTypes.STRING(255),
       allowNull: false,
     },
@@ -24,7 +18,11 @@ const UserAnswer = sequelize.define(
       type: DataTypes.STRING(255),
       allowNull: false,
     },
-    attempt_id: {
+    quiz_attempt_id: {
+      type: DataTypes.STRING(255),
+      allowNull: false,
+    },
+    selected_answer_id: {
       type: DataTypes.STRING(255),
       allowNull: false,
     },
@@ -34,5 +32,8 @@ const UserAnswer = sequelize.define(
     timestamps: false,
   }
 );
+
+UserAnswer.belongsTo(Question, { foreignKey: 'question_id', as: 'question' });
+UserAnswer.belongsTo(Answer, { foreignKey: 'selected_answer_id', as: 'selectedAnswer' });
 
 module.exports = UserAnswer;

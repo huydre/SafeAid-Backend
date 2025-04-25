@@ -1,5 +1,6 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/db');
+const UserAnswer = require('./userAnswer.model');
 
 const QuizAttempts = sequelize.define(
   'QuizAttempts',
@@ -12,14 +13,13 @@ const QuizAttempts = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false,
     },
-    is_completed: {
+    max_score: {
       type: DataTypes.INTEGER,
-      allowNull: false,
     },
     duration: {
       type: DataTypes.INTEGER,
     },
-    created_at: {
+    completed_at: {
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,
     },
@@ -37,5 +37,8 @@ const QuizAttempts = sequelize.define(
     timestamps: false,
   }
 );
+
+QuizAttempts.hasMany(UserAnswer, { foreignKey: 'quiz_attempt_id', as: 'userAnswers' });
+UserAnswer.belongsTo(QuizAttempts, { foreignKey: 'quiz_attempt_id', as: 'quizAttempt' });
 
 module.exports = QuizAttempts;
