@@ -6,6 +6,7 @@ const Like = require('./like.model');
 const PostMedia = require('./postMedia.model'); 
 const News = require('./news.model');
 const NewsMedia = require('./newsMedia.model');
+const NewsComment = require('./newsComment.model');
 
 /**
  * Thiết lập Association:
@@ -46,6 +47,18 @@ News.belongsTo(User, { foreignKey: 'author_id', as: 'author' });
 // Một News có nhiều NewsMedia
 News.hasMany(NewsMedia, { foreignKey: 'news_id', as: 'media' });
 NewsMedia.belongsTo(News, { foreignKey: 'news_id', as: 'news' });
+
+// News ↔ NewsComment
+News.hasMany(NewsComment, { foreignKey:'news_id', as:'comments' });
+NewsComment.belongsTo(News,     { foreignKey:'news_id', as:'news' });
+
+// comment ↔ reply
+NewsComment.belongsTo(NewsComment, { foreignKey:'parent_comment_id', as:'parent' });
+NewsComment.hasMany(NewsComment,   { foreignKey:'parent_comment_id', as:'replies' });
+
+// User ↔ NewsComment
+User.hasMany(NewsComment, { foreignKey:'user_id', as:'newsComments' });
+NewsComment.belongsTo(User, { foreignKey:'user_id', as:'user' });
 
 // Export các model sau khi associations đã được thiết lập
 module.exports = {

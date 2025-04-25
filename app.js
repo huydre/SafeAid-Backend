@@ -6,7 +6,10 @@ const morgan = require('morgan');
 require('dotenv').config();
 const db = require('./config/db');
 const models = require('./models'); 
-
+const swaggerUi   = require('swagger-ui-express');
+const swaggerFile = require('./docs/swagger-output.json');
+const swaggerJsdoc = require('swagger-jsdoc');
+const swaggerOptions = require('./config/swaggerOptions');
 
 const app = express();
 
@@ -21,10 +24,6 @@ db.authenticate()
   .then(() => console.log('Database connected...'))
   .catch(err => console.log('Error: ' + err));
 
-  // Tích hợp Swagger
-const swaggerJsdoc = require('swagger-jsdoc');
-const swaggerUi = require('swagger-ui-express');
-const swaggerOptions = require('./config/swaggerOptions');
 
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
@@ -45,6 +44,7 @@ app.use('/api/posts', require('./routes/postRoutes'));
 app.use('/api/likes', require('./routes/likeRoutes'));
 app.use('/api/comments', require('./routes/commentRoutes'));
 app.use('/api/news', require('./routes/newsRoutes'));
+app.use('/api/news/:news_id/comments', require('./routes/newsCommentRoutes'));
 
 // Các routes khác có thể thêm ở đây...
 // app.use('/api/guides', require('./routes/guideRoutes'));

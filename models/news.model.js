@@ -25,7 +25,12 @@ const News = sequelize.define('News', {
   author_id: {
     type: DataTypes.STRING(255),
     allowNull: false
-  }
+  },
+  view_count: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 0
+  },
 }, {
   tableName: 'News',
   timestamps: false  // đã có created_at, updated_at tự quản

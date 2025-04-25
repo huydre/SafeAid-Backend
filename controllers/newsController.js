@@ -68,22 +68,33 @@ exports.getNewsList = async (req, res) => {
 /**
  * Lấy chi tiết tin tức theo ID
  */
-exports.getNewsDetail = async (req, res) => {
-  try {
-    const { news_id } = req.params;
-    const news = await News.findOne({
-      where: { news_id },
-      include: [
-        { model: User,      as: 'author',  attributes: ['user_id','username'] },
-        { model: NewsMedia, as: 'media',   attributes: ['media_id','media_url','order_index','caption'] }
-      ]
-    });
-    if (!news) return res.status(404).json({ error: 'Không tìm thấy tin tức.' });
-    res.json(news);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Lỗi khi lấy chi tiết tin tức.' });
-  }
+exports.getNewsDetail = async (req,res) => {
+  const { news_id } = req.params;
+  // 1. Tăng view_count
+  await News.increment('view_count',{ by:1, where:{ news_id } });
+
+  // 2. Lấy detail kèm comments/replies
+  const news = await News.findOne({
+    where:{ news_id },
+    include:[
+      { model: User, as:'author', attributes:['user_id','username'] },
+      { model: NewsMedia, as:'media', attributes:['media_id','media_url'] },
+      { 
+        model: NewsComment, as:'comments',
+        where:{ parent_comment_id: null },
+        required: false,
+        include:[
+          { model: User, as:'user', attributes:['user_id','username'] },
+          { model: NewsComment, as:'replies',
+            include:[ { model: User, as:'user', attributes:['user_id','username'] } ]
+          }
+        ]
+      }
+    ]
+  });
+
+  if(!news) return res.status(404).json({ error:'Không tìm thấy tin tức.' });
+  res.json(news);
 };
 
 /**
