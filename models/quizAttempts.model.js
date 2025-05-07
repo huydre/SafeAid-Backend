@@ -1,6 +1,7 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/db');
 const UserAnswer = require('./userAnswer.model');
+const Quiz = require('./quizzes.model'); // Import model Quiz
 
 const QuizAttempts = sequelize.define(
   'QuizAttempts',
@@ -40,5 +41,6 @@ const QuizAttempts = sequelize.define(
 
 QuizAttempts.hasMany(UserAnswer, { foreignKey: 'quiz_attempt_id', as: 'userAnswers' });
 UserAnswer.belongsTo(QuizAttempts, { foreignKey: 'quiz_attempt_id', as: 'quizAttempt' });
+QuizAttempts.belongsTo(Quiz, { foreignKey: 'quiz_id', as: 'quiz' });
 
 module.exports = QuizAttempts;

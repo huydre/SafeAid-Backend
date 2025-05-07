@@ -62,4 +62,62 @@ router.post('/', quizAttemptsController.saveQuizAttempt);
  */
 router.get('/user/:user_id', quizAttemptsController.getQuizAttemptsByUserId);
 
+
+/**
+ * @swagger
+ * /api/quiz-attempts/{user_id}/{quiz_id}:
+ *   get:
+ *     summary: Lấy danh sách QuizAttempts theo user_id và quiz_id
+ *     tags: [QuizAttempts]
+ *     parameters:
+ *       - in: path
+ *         name: user_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID của người dùng
+ *       - in: path
+ *         name: quiz_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID của quiz
+ *     responses:
+ *       200:
+ *         description: Lấy danh sách QuizAttempts thành công.
+ *       404:
+ *         description: Không tìm thấy QuizAttempts nào.
+ *       500:
+ *         description: Lỗi server.
+ */
+router.get('/:user_id/:quiz_id', quizAttemptsController.getQuizAttemptsByUserIdAndQuizId);
+
+/**
+ * @swagger
+ * /api/quiz-attempts/{quiz_attempt_id}/{quiz_id}/details:
+ *   get:
+ *     summary: Lấy danh sách UserAnswer theo quiz_attempt_id và Question theo quiz_id
+ *     tags: [QuizAttempts]
+ *     parameters:
+ *       - in: path
+ *         name: quiz_attempt_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID của quiz_attempt
+ *       - in: path
+ *         name: quiz_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID của quiz
+ *     responses:
+ *       200:
+ *         description: Lấy danh sách thành công.
+ *       500:
+ *         description: Lỗi server.
+ */
+router.get('/:quiz_attempt_id/:quiz_id/details', quizAttemptsController.getHistoryQuizDetail);
+
+module.exports = router;
 module.exports = router;
