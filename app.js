@@ -6,6 +6,7 @@ const morgan = require('morgan');
 require('dotenv').config();
 const db = require('./config/db');
 const models = require('./models'); 
+const path = require('path');
 
 const app = express();
 
@@ -27,6 +28,9 @@ const swaggerOptions = require('./config/swaggerOptions');
 
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
+// Serve thư mục uploads dưới đường dẫn /uploads
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Đồng bộ model với database (nếu cần, chỉ dùng trong development)
 db.sync()
