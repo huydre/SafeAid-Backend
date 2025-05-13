@@ -48,7 +48,12 @@ app.use('/api/likes', require('./routes/likeRoutes'));
 app.use('/api/comments', require('./routes/commentRoutes'));
 app.use('/api/news', require('./routes/newsRoutes'));
 app.use('/api/news/:news_id/comments', require('./routes/newsCommentRoutes'));
-
+app.use('/api/quizzes', require('./routes/quizRoutes'));
+app.use('/api/quiz-categories', require('./routes/quizCategoryRoutes'));
+app.use('/api/questions', require('./routes/questionRoutes'));
+app.use('/api/answers', require('./routes/answerRoutes'));
+app.use('/api/quiz-attempts', require('./routes/quizAttemptsRoutes'));
+app.use('/api/user-answers', require('./routes/userAnswerRoutes'));
 // Các routes khác có thể thêm ở đây...
 // app.use('/api/guides', require('./routes/guideRoutes'));
 
