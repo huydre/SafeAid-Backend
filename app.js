@@ -8,6 +8,9 @@ const db = require('./config/db');
 const models = require('./models'); 
 const path = require('path');
 
+const guideStepRoutes = require('./routes/guideStepRoutes');
+const guideStepMediaRoutes = require('./routes/guideStepMediaRoutes');
+
 const app = express();
 
 // Middleware
@@ -33,6 +36,7 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Đồng bộ model với database (nếu cần, chỉ dùng trong development)
+// Đồng bọc model với database (nếu cần, chỉ dùng trong development)
 db.sync()
   .then(() => console.log('All models were synchronized successfully'))
   .catch((err) => console.log('Sync error:', err));
@@ -56,6 +60,18 @@ app.use('/api/quiz-attempts', require('./routes/quizAttemptsRoutes'));
 app.use('/api/user-answers', require('./routes/userAnswerRoutes'));
 // Các routes khác có thể thêm ở đây...
 // app.use('/api/guides', require('./routes/guideRoutes'));
+
+// Thêm route cho guides
+app.use('/api/guides', require('./routes/guideRoutes'));
+
+// Thêm route cho guide categories
+app.use('/api/guide-categories', require('./routes/guideCategoryRoutes'));
+
+// Thêm route cho guide media (nested route)
+app.use('/api/guides/:guide_id/media', require('./routes/guideMediaRoutes'));
+
+app.use('/api/guide-steps', guideStepRoutes);
+app.use('/api/guide-step-media', guideStepMediaRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
