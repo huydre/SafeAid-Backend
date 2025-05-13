@@ -7,6 +7,7 @@ require('dotenv').config();
 const db = require('./config/db');
 const models = require('./models'); 
 const path = require('path');
+const commentRoutes = require('./routes/commentRoutes');
 
 const guideStepRoutes = require('./routes/guideStepRoutes');
 const guideStepMediaRoutes = require('./routes/guideStepMediaRoutes');
@@ -58,6 +59,8 @@ app.use('/api/questions', require('./routes/questionRoutes'));
 app.use('/api/answers', require('./routes/answerRoutes'));
 app.use('/api/quiz-attempts', require('./routes/quizAttemptsRoutes'));
 app.use('/api/user-answers', require('./routes/userAnswerRoutes'));
+app.use('/api/posts/:post_id/comments', commentRoutes);
+
 // Các routes khác có thể thêm ở đây...
 // app.use('/api/guides', require('./routes/guideRoutes'));
 

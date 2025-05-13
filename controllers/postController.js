@@ -107,7 +107,6 @@ exports.getPosts = async (req, res) => {
   }
 };
 
-
 /**
  * Lấy chi tiết bài viết theo post_id.
  * Bao gồm thông tin của người viết, danh sách comment (với thông tin người bình luận),

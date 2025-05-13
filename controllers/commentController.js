@@ -1,6 +1,50 @@
 const { v4: uuidv4 } = require('uuid');
 const Comment = require('../models/comment.model');
 const Post = require('../models/post.model');
+const User = require('../models/User');
+
+
+exports.getCommentsByPostId = async (req, res) => {
+  try {
+    const { post_id } = req.params; // Lấy post_id từ params
+    const comments = await Comment.findAll({
+      where: { post_id },
+      order: [['created_at', 'DESC']], // Sắp xếp theo thời gian tạo mới nhất
+      include: [
+        { model: User, as: 'user', attributes: ['user_id','username','profile_image_path'] },
+      ]
+    });
+    if (comments.length === 0) {
+      return res.status(404).json({ message: 'Không tìm thấy comment nào cho bài viết này.' });
+    }
+    res.status(200).json(comments);
+  } catch (error) {
+    console.error('Lỗi lấy comment:', error);
+    res.status(500).json({ error: 'Đã có lỗi xảy ra khi lấy comment.' });
+  }
+};
+
+exports.getCommentById = async (req, res) => {
+  try {
+    const { comment_id } = req.params; // Lấy comment_id từ params
+    const comment = await Comment.findOne({
+      where: { comment_id },
+      include: [
+        {
+          model: User,
+          attributes: ['user_id', 'username', 'avatar'] // Chỉ lấy các trường cần thiết từ bảng User
+        }
+      ]
+    });
+    if (!comment) {
+      return res.status(404).json({ message: 'Không tìm thấy comment này.' });
+    }
+    res.status(200).json(comment);
+  } catch (error) {
+    console.error('Lỗi lấy comment:', error);
+    res.status(500).json({ error: 'Đã có lỗi xảy ra khi lấy comment.' });
+  }
+}
 
 /**
  * Tạo comment mới cho bài viết.
@@ -35,6 +79,8 @@ exports.createComment = async (req, res) => {
       content
       // created_at và updated_at sẽ được tự động gán nếu model định nghĩa defaultValue hoặc sử dụng hooks
     });
+
+    await Post.increment('comment_count', { by: 1, where: { post_id } });
 
     // (Tùy chọn) Cập nhật số lượng comment của bài viết, ví dụ:
     // await Post.increment('comment_count', { by: 1, where: { post_id } });
@@ -116,6 +162,7 @@ exports.deleteComment = async (req, res) => {
 
     await comment.destroy();
 
+    await Post.decrement('comment_count', { by: 1, where: { post_id: comment.post_id } });
     // (Tùy chọn) Cập nhật số lượng comment của bài viết, ví dụ:
     // await Post.decrement('comment_count', { by: 1, where: { post_id: comment.post_id } });
 
