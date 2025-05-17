@@ -68,9 +68,11 @@ exports.getPosts = async (req, res) => {
     page  = parseInt(page)  || 1;
     limit = parseInt(limit) || 10;
     const offset = (page - 1) * limit;
-    // Tạo base URL (http hoặc https)
+
     const host =  process.env.HOST || req.get('host');
     const baseUrl = `${req.protocol}://${host}:5000`;
+    const currentUserId = req?.user?.user_id;
+    console.log('currentUserId:', currentUserId);
 
     const posts = await Post.findAll({
       offset,
@@ -93,6 +95,11 @@ exports.getPosts = async (req, res) => {
     // Chuyển từng instance thành JSON, rồi prefix media_link
     const result = posts.map(post => {
       const p = post.toJSON();
+
+      p.liked_by_user = currentUserId ? 
+        p.likes.some(like => like.user.user_id === currentUserId) : 
+        false;
+
       p.media = p.media.map(m => ({
         ...m,
         media_link: baseUrl + '/' + m.media_link.replace(/\\/g, '/')
@@ -106,7 +113,6 @@ exports.getPosts = async (req, res) => {
     res.status(500).json({ error: 'Đã có lỗi xảy ra khi lấy danh sách bài viết.' });
   }
 };
-
 
 /**
  * Lấy chi tiết bài viết theo post_id.

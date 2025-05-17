@@ -33,7 +33,7 @@ exports.likePost = async (req, res) => {
     });
 
     // (Tùy chọn) Cập nhật số lượt like của bài viết:
-    // await Post.increment('like_count', { by: 1, where: { post_id } });
+    await Post.increment('like_count', { by: 1, where: { post_id } });
 
     res.status(201).json({
       message: 'Bài viết đã được like thành công.',
@@ -68,7 +68,7 @@ exports.unlikePost = async (req, res) => {
     await existingLike.destroy();
 
     // (Tùy chọn) Cập nhật số lượt like của bài viết:
-    // await Post.decrement('like_count', { by: 1, where: { post_id } });
+    await Post.decrement('like_count', { by: 1, where: { post_id } });
 
     res.json({ message: 'Đã bỏ like bài viết thành công.' });
   } catch (error) {

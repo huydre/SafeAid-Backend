@@ -12,7 +12,7 @@ router.post('/', authMiddleware, upload.array('images', 5), postController.creat
 router.post('/', authMiddleware, postController.createPost);
 
 // Lấy danh sách bài viết (có thể không yêu cầu xác thực)
-router.get('/', postController.getPosts);
+router.get('/', authMiddleware, postController.getPosts);
 
 // Lấy chi tiết bài viết theo post_id (có thể không yêu cầu xác thực)
 router.get('/:post_id', postController.getPostById);

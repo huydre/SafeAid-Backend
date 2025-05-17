@@ -7,6 +7,7 @@ require('dotenv').config();
 const db = require('./config/db');
 const models = require('./models'); 
 const path = require('path');
+const commentRoutes = require('./routes/commentRoutes');
 
 const guideStepRoutes = require('./routes/guideStepRoutes');
 const guideStepMediaRoutes = require('./routes/guideStepMediaRoutes');
@@ -48,16 +49,20 @@ app.get('/', (req, res) => {
 
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/posts', require('./routes/postRoutes'));
-app.use('/api/likes', require('./routes/likeRoutes'));
+app.use('/api/posts', require('./routes/likeRoutes'));
 app.use('/api/comments', require('./routes/commentRoutes'));
+app.use('/api/posts/:post_id/comments', commentRoutes);
+
 app.use('/api/news', require('./routes/newsRoutes'));
 app.use('/api/news/:news_id/comments', require('./routes/newsCommentRoutes'));
+
 app.use('/api/quizzes', require('./routes/quizRoutes'));
 app.use('/api/quiz-categories', require('./routes/quizCategoryRoutes'));
 app.use('/api/questions', require('./routes/questionRoutes'));
 app.use('/api/answers', require('./routes/answerRoutes'));
 app.use('/api/quiz-attempts', require('./routes/quizAttemptsRoutes'));
 app.use('/api/user-answers', require('./routes/userAnswerRoutes'));
+
 // Các routes khác có thể thêm ở đây...
 // app.use('/api/guides', require('./routes/guideRoutes'));
 
