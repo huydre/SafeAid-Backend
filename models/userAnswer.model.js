@@ -1,30 +1,40 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/db');
 
-const UserAnswer = sequelize.define('UserAnswer', {
-  user_answer_id: {
-    type: DataTypes.STRING(255),
-    primaryKey: true
+const Question = require('./question.model');
+const Answer = require('./answer.model');
+
+const UserAnswer = sequelize.define(
+  'UserAnswer',
+  {
+    user_answer_id: {
+      type: DataTypes.STRING(255),
+      primaryKey: true,
+    },
+    user_id: {
+      type: DataTypes.STRING(255),
+      allowNull: false,
+    },
+    question_id: {
+      type: DataTypes.STRING(255),
+      allowNull: false,
+    },
+    quiz_attempt_id: {
+      type: DataTypes.STRING(255),
+      allowNull: false,
+    },
+    selected_answer_id: {
+      type: DataTypes.STRING(255),
+      allowNull: false,
+    },
   },
-  is_correct: {
-    type: DataTypes.INTEGER,
-    allowNull: false
-  },
-  user_id: {
-    type: DataTypes.STRING(255),
-    allowNull: false
-  },
-  question_id: {
-    type: DataTypes.STRING(255),
-    allowNull: false
-  },
-  attempt_id: {
-    type: DataTypes.STRING(255),
-    allowNull: false
+  {
+    tableName: 'UserAnswer',
+    timestamps: false,
   }
-}, {
-  tableName: 'UserAnswer',
-  timestamps: false
-});
+);
+
+UserAnswer.belongsTo(Question, { foreignKey: 'question_id', as: 'question' });
+UserAnswer.belongsTo(Answer, { foreignKey: 'selected_answer_id', as: 'selectedAnswer' });
 
 module.exports = UserAnswer;
