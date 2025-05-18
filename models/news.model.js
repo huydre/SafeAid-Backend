@@ -11,8 +11,12 @@ const News = sequelize.define('News', {
     allowNull: false
   },
   content: {
-    type: DataTypes.TEXT('long'),   // có thể lưu nhiều ký tự, chứa markdown hoặc HTML
-    allowNull: false
+    type: DataTypes.STRING(255),
+    allowNull: true
+  },
+  thumbnail_path: {
+    type: DataTypes.STRING(255),
+    allowNull: true
   },
   created_at: {
     type: DataTypes.DATE,
@@ -25,15 +29,10 @@ const News = sequelize.define('News', {
   author_id: {
     type: DataTypes.STRING(255),
     allowNull: false
-  },
-  view_count: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-    defaultValue: 0
-  },
+  }
 }, {
   tableName: 'News',
-  timestamps: false  // đã có created_at, updated_at tự quản
+  timestamps: false
 });
 
 module.exports = News;

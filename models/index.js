@@ -3,30 +3,7 @@ const User = require('./User');
 const Post = require('./post.model');
 const Comment = require('./comment.model');
 const Like = require('./like.model');
-const PostMedia = require('./postMedia.model'); 
-const News = require('./news.model');
-const NewsMedia = require('./newsMedia.model');
-const NewsComment = require('./newsComment.model');
-
-// Import các model mới
-const Answer = require('./answer.model');
-const EmergencyContact = require('./emergencyContact.model');
-const FavouriteGuideList = require('./favouriteGuideList.model');
-const FavouriteGuideItem = require('./favouriteGuideItem.model');
-const GuideCategory = require('./guideCategory.model');
-const GuideMedia = require('./guideMedia.model');
-const Guide = require('./guide.model');
-const Leaderboard = require('./leaderboard.model');
-const News = require('./news.model');
-const NewsMedia = require('./newsMedia.model');
-const Question = require('./question.model');
-const QuizAttempt = require('./quizAttempt.model');
-const QuizCategory = require('./quizCategory.model');
-const Quiz = require('./quiz.model');
-const SOSRequest = require('./sosRequest.model');
-const UserAnswer = require('./userAnswer.model');
-const GuideStep = require('./guideStep.model');
-const GuideStepMedia = require('./guideStepMedia.model');
+const PostMedia = require('./postMedia.model'); // Giả sử bạn đã tạo model cho PostMedia
 
 // Import các model mới
 const Answer = require('./answer.model');
@@ -79,26 +56,6 @@ PostMedia.belongsTo(Post, { foreignKey: 'post_id', as: 'post' });
 // Nếu cần, có thể thiết lập quan hệ giữa User và PostMedia (người upload media)
 // User.hasMany(PostMedia, { foreignKey: 'user_id', as: 'uploadMedia' });
 // PostMedia.belongsTo(User, { foreignKey: 'user_id', as: 'uploader' });
-
-// Một User (author) có nhiều News
-User.hasMany(News, { foreignKey: 'author_id', as: 'news' });
-News.belongsTo(User, { foreignKey: 'author_id', as: 'author' });
-
-// Một News có nhiều NewsMedia
-News.hasMany(NewsMedia, { foreignKey: 'news_id', as: 'media' });
-NewsMedia.belongsTo(News, { foreignKey: 'news_id', as: 'news' });
-
-// News ↔ NewsComment
-News.hasMany(NewsComment, { foreignKey:'news_id', as:'comments' });
-NewsComment.belongsTo(News,     { foreignKey:'news_id', as:'news' });
-
-// comment ↔ reply
-NewsComment.belongsTo(NewsComment, { foreignKey:'parent_comment_id', as:'parent' });
-NewsComment.hasMany(NewsComment,   { foreignKey:'parent_comment_id', as:'replies' });
-
-// User ↔ NewsComment
-User.hasMany(NewsComment, { foreignKey:'user_id', as:'newsComments' });
-NewsComment.belongsTo(User, { foreignKey:'user_id', as:'user' });
 
 // Associations cho News và NewsMedia
 News.hasMany(NewsMedia, { foreignKey: 'news_id', as: 'media' });
@@ -190,8 +147,6 @@ module.exports = {
   Like,
   PostMedia,
   Answer,
-  News, 
-  NewsMedia,
   EmergencyContact,
   FavouriteGuideList,
   FavouriteGuideItem,

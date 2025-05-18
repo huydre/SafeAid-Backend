@@ -6,8 +6,7 @@ const User = require('../models/User');
 const Comment = require('../models/comment.model');
 const Like = require('../models/like.model');
 const PostMedia = require('../models/postMedia.model');
-const { config } = require('dotenv');
-require('dotenv').config();
+
 /**
  * Tạo bài viết mới
  * Yêu cầu:
@@ -65,48 +64,61 @@ exports.createPost = async (req, res) => {
 exports.getPosts = async (req, res) => {
   try {
     let { page, limit } = req.query;
-    page  = parseInt(page)  || 1;
+    page = parseInt(page) || 1;
     limit = parseInt(limit) || 10;
     const offset = (page - 1) * limit;
-    // Tạo base URL (http hoặc https)
-    const host =  process.env.HOST || req.get('host');
-    const baseUrl = `${req.protocol}://${host}:5000`;
 
     const posts = await Post.findAll({
       offset,
       limit,
       order: [['created_at', 'DESC']],
       include: [
-        { model: User, as: 'user', attributes: ['user_id','username','profile_image_path'] },
-        { model: PostMedia, as: 'media', attributes: ['postmedia_id','media_type','media_link'] },
-        { model: Comment, as: 'comments', include:[
-            { model: User, as: 'user', attributes: ['user_id','username'] }
+        {
+          model: User,
+          as: 'user',
+          attributes: ['user_id', 'username', 'profile_image_path']
+        },
+        {
+          model: PostMedia,
+          as: 'media',
+          // Trả về các trường cần thiết, không hiển thị media_link
+          attributes: ['postmedia_id', 'media_type', 'media_link']
+        },
+        {
+          model: Comment,
+          as: 'comments',
+          include: [
+            {
+              model: User,
+              as: 'user',
+              attributes: ['user_id', 'username']
+            }
           ]
         },
-        { model: Like, as: 'likes', include:[
-            { model: User, as: 'user', attributes: ['user_id','username'] }
+        {
+          model: Like,
+          as: 'likes',
+          include: [
+            {
+              model: User,
+              as: 'user',
+              attributes: ['user_id', 'username']
+            }
           ]
         }
       ]
     });
 
-    // Chuyển từng instance thành JSON, rồi prefix media_link
-    const result = posts.map(post => {
-      const p = post.toJSON();
-      p.media = p.media.map(m => ({
-        ...m,
-        media_link: baseUrl + '/' + m.media_link.replace(/\\/g, '/')
-      }));
-      return p;
+    res.json({
+      page,
+      limit,
+      posts
     });
-
-    res.json({ page, limit, posts: result });
   } catch (error) {
     console.error('Lỗi lấy danh sách bài viết:', error);
     res.status(500).json({ error: 'Đã có lỗi xảy ra khi lấy danh sách bài viết.' });
   }
 };
-
 
 /**
  * Lấy chi tiết bài viết theo post_id.
@@ -116,19 +128,40 @@ exports.getPosts = async (req, res) => {
 exports.getPostById = async (req, res) => {
   try {
     const { post_id } = req.params;
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
 
     const post = await Post.findOne({
       where: { post_id },
       include: [
-        { model: User, as: 'user', attributes: ['user_id','username','profile_image_path'] },
-        { model: PostMedia, as: 'media', attributes: ['postmedia_id','media_type','media_link'] },
-        { model: Comment, as: 'comments', include:[
-            { model: User, as: 'user', attributes: ['user_id','username'] }
+        {
+          model: User,
+          as: 'user',
+          attributes: ['user_id', 'username', 'profile_image_path']
+        },
+        {
+          model: PostMedia,
+          as: 'media',
+          attributes: ['postmedia_id', 'media_type', 'media_link'] // không lấy media_link
+        },
+        {
+          model: Comment,
+          as: 'comments',
+          include: [
+            {
+              model: User,
+              as: 'user',
+              attributes: ['user_id', 'username']
+            }
           ]
         },
-        { model: Like, as: 'likes', include:[
-            { model: User, as: 'user', attributes: ['user_id','username'] }
+        {
+          model: Like,
+          as: 'likes',
+          include: [
+            {
+              model: User,
+              as: 'user',
+              attributes: ['user_id', 'username']
+            }
           ]
         }
       ]
@@ -138,14 +171,7 @@ exports.getPostById = async (req, res) => {
       return res.status(404).json({ error: 'Không tìm thấy bài viết.' });
     }
 
-    // Chuyển thành JSON và prefix media_link
-    const p = post.toJSON();
-    p.media = p.media.map(m => ({
-      ...m,
-      media_link: baseUrl + '/' + m.media_link.replace(/\\/g, '/')
-    }));
-
-    res.json(p);
+    res.json(post);
   } catch (error) {
     console.error('Lỗi lấy chi tiết bài viết:', error);
     res.status(500).json({ error: 'Đã có lỗi xảy ra khi lấy chi tiết bài viết.' });
