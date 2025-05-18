@@ -11,7 +11,7 @@ const News = sequelize.define('News', {
     allowNull: false
   },
   content: {
-    type: DataTypes.TEXT('long'),   // có thể lưu nhiều ký tự, chứa markdown hoặc HTML
+    type: DataTypes.TEXT('long'),  
     allowNull: false
   },
   created_at: {
@@ -21,6 +21,10 @@ const News = sequelize.define('News', {
   updated_at: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW
+  },
+  thumbnail_path: {           
+    type: DataTypes.STRING(255),
+    allowNull: true
   },
   author_id: {
     type: DataTypes.STRING(255),
@@ -33,7 +37,7 @@ const News = sequelize.define('News', {
   },
 }, {
   tableName: 'News',
-  timestamps: false  // đã có created_at, updated_at tự quản
+  timestamps: false  
 });
 
 module.exports = News;
