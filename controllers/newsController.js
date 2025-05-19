@@ -6,7 +6,7 @@ const admin = require('firebase-admin');
 
 /**
  * Tạo tin tức mới
- * Nếu cần upload media (thumbnails hoặc nhiều media), 
+ * Nếu cần upload media (thumbnails hoặc nhiều media),
  * bạn sử dụng multer tương tự postController.
  */
 exports.createNews = async (req, res) => {
@@ -53,11 +53,17 @@ exports.getNewsList = async (req, res) => {
     const offset = (page - 1) * limit;
 
     const newsList = await News.findAll({
-      offset, limit, order: [['created_at','DESC']],
+      offset,
+      limit,
+      order: [['created_at', 'DESC']],
       include: [
-        { model: User,      as: 'author',  attributes: ['user_id','username'] },
-        { model: NewsMedia, as: 'media',   attributes: ['media_id','media_url','order_index'] }
-      ]
+        { model: User, as: 'author', attributes: ['user_id', 'username'] },
+        {
+          model: NewsMedia,
+          as: 'media',
+          attributes: ['media_id', 'media_url', 'order_index'],
+        },
+      ],
     });
     res.json({ page, limit, data: newsList });
   } catch (err) {
@@ -69,32 +75,37 @@ exports.getNewsList = async (req, res) => {
 /**
  * Lấy chi tiết tin tức theo ID
  */
-exports.getNewsDetail = async (req,res) => {
+exports.getNewsDetail = async (req, res) => {
   const { news_id } = req.params;
   // 1. Tăng view_count
-  await News.increment('view_count',{ by:1, where:{ news_id } });
+  await News.increment('view_count', { by: 1, where: { news_id } });
 
   // 2. Lấy detail kèm comments/replies
   const news = await News.findOne({
-    where:{ news_id },
-    include:[
-      { model: User, as:'author', attributes:['user_id','username'] },
-      { model: NewsMedia, as:'media', attributes:['media_id','media_url'] },
-      { 
-        model: NewsComment, as:'comments',
-        where:{ parent_comment_id: null },
+    where: { news_id },
+    include: [
+      { model: User, as: 'author', attributes: ['user_id', 'username'] },
+      { model: NewsMedia, as: 'media', attributes: ['media_id', 'media_url'] },
+      {
+        model: NewsComment,
+        as: 'comments',
+        where: { parent_comment_id: null },
         required: false,
-        include:[
-          { model: User, as:'user', attributes:['user_id','username'] },
-          { model: NewsComment, as:'replies',
-            include:[ { model: User, as:'user', attributes:['user_id','username'] } ]
-          }
-        ]
-      }
-    ]
+        include: [
+          { model: User, as: 'user', attributes: ['user_id', 'username'] },
+          {
+            model: NewsComment,
+            as: 'replies',
+            include: [
+              { model: User, as: 'user', attributes: ['user_id', 'username'] },
+            ],
+          },
+        ],
+      },
+    ],
   });
 
-  if(!news) return res.status(404).json({ error:'Không tìm thấy tin tức.' });
+  if (!news) return res.status(404).json({ error: 'Không tìm thấy tin tức.' });
   res.json(news);
 };
 
@@ -105,13 +116,19 @@ exports.updateNews = async (req, res) => {
   try {
     const { news_id } = req.params;
     const news = await News.findOne({ where: { news_id } });
-    if (!news) return res.status(404).json({ error: 'Không tìm thấy tin tức.' });
+    if (!news)
+      return res.status(404).json({ error: 'Không tìm thấy tin tức.' });
 
     // Chỉ author mới update (nếu cần)
     // if (req.user.user_id !== news.author_id) return res.status(403).json({ error: 'Không có quyền.' });
 
     const { title, content, thumbnail_path } = req.body;
-    await news.update({ title, content, thumbnail_path, updated_at: new Date() });
+    await news.update({
+      title,
+      content,
+      thumbnail_path,
+      updated_at: new Date(),
+    });
     res.json({ message: 'Cập nhật thành công', news });
   } catch (err) {
     console.error(err);
@@ -126,7 +143,8 @@ exports.deleteNews = async (req, res) => {
   try {
     const { news_id } = req.params;
     const news = await News.findOne({ where: { news_id } });
-    if (!news) return res.status(404).json({ error: 'Không tìm thấy tin tức.' });
+    if (!news)
+      return res.status(404).json({ error: 'Không tìm thấy tin tức.' });
     // if (req.user.user_id !== news.author_id) return res.status(403).json({ error: 'Không có quyền.' });
     await news.destroy();
     res.json({ message: 'Xoá tin tức thành công' });
@@ -143,26 +161,24 @@ exports.sendDemoNewsNotification = async (req, res) => {
 
   const payload = {
     topic: "news",
-    notification: {
-      title: "Tin tức mới!",
-      body: title
-    },
     data: {
-      type: "news",
-      id: newsId,
       title: title,
-      content: content
+      content: content,
+      news_id: newsId
+    },
+    android: {
+      priority: "high", // giúp đẩy noti nhanh
+      ttl: 3600 * 1000 // optional: 1h timeout nếu chưa gửi được
     }
   };
 
   try {
-    await admin.messaging().send(payload);
+    const response = await admin.messaging().send(payload);
     res.status(200).json({
       message: "Đã gửi thông báo tin tức demo thành công.",
       data: { id: newsId, title, content }
     });
   } catch (error) {
-    console.error("Lỗi gửi FCM:", error);
     res.status(500).json({ message: "Không thể gửi thông báo." });
   }
 };
