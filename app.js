@@ -9,6 +9,8 @@ const models = require('./models');
 
 const guideStepRoutes = require('./routes/guideStepRoutes');
 const guideStepMediaRoutes = require('./routes/guideStepMediaRoutes');
+const favouriteGuideListRoutes = require('./routes/favouriteGuideListRoutes');
+const favouriteGuideItemRoutes = require('./routes/favouriteGuideItemRoutes');
 
 const app = express();
 
@@ -58,6 +60,9 @@ app.use('/api/guides/:guide_id/media', require('./routes/guideMediaRoutes'));
 
 app.use('/api/guide-steps', guideStepRoutes);
 app.use('/api/guide-step-media', guideStepMediaRoutes);
+
+app.use('/api/favourite-guide-lists', favouriteGuideListRoutes);
+app.use('/api/favourite-guide-items', favouriteGuideItemRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
