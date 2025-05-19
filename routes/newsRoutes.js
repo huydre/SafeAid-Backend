@@ -8,7 +8,10 @@ const upload = require('../middlewares/upload');
 router.post(
   '/',
   authMiddleware,
-  upload.array('media', 5),
+  upload.fields([
+    { name: 'thumbnail', maxCount: 1 },
+    { name: 'media',     maxCount: 5 }
+  ]),
   newsController.createNews
 );
 

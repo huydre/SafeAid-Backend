@@ -9,8 +9,6 @@ const User = sequelize.define('User', {
     primaryKey: true,
     allowNull: false,
     comment: 'Khóa chính của bảng Users'
-    // Nếu bạn muốn tự sinh UUID, có thể làm như sau:
-    // defaultValue: Sequelize.UUIDV4
   },
   username: {
     type: DataTypes.STRING(255),
@@ -66,13 +64,8 @@ const User = sequelize.define('User', {
     comment: 'Quyền hạn (VD: user, admin)'
   }
 }, {
-  tableName: 'Users',   // Tên bảng trong CSDL
-  timestamps: false,    // Vô hiệu hóa timestamps mặc định của Sequelize (createdAt/updatedAt)
-  // Nếu muốn Sequelize tự quản lý createdAt, updatedAt, bạn có thể dùng:
-  // timestamps: true,
-  // underscored: true,
-  // createdAt: 'created_at',
-  // updatedAt: 'updated_at'
+  tableName: 'Users', 
+  timestamps: false,    
 });
 
 module.exports = User;
