@@ -11,6 +11,12 @@ const commentRoutes = require('./routes/commentRoutes');
 
 const guideStepRoutes = require('./routes/guideStepRoutes');
 const guideStepMediaRoutes = require('./routes/guideStepMediaRoutes');
+const admin = require("firebase-admin");
+const firebaseServiceAccount = require("./firebaseServiceAccountKey.json");
+
+admin.initializeApp({
+  credential: admin.credential.cert(firebaseServiceAccount)
+});
 
 const app = express();
 

@@ -2,6 +2,7 @@ const { v4: uuidv4 } = require('uuid');
 const News      = require('../models/news.model');
 const NewsMedia = require('../models/newsMedia.model');
 const User      = require('../models/User');
+const admin = require('firebase-admin');
 
 /**
  * Tạo tin tức mới
@@ -132,5 +133,36 @@ exports.deleteNews = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Lỗi khi xoá tin tức.' });
+  }
+};
+
+exports.sendDemoNewsNotification = async (req, res) => {
+  const newsId = uuidv4();
+  const title = "📰 Tin tức demo #" + Math.floor(Math.random() * 1000);
+  const content = "Đây là nội dung demo được tạo ngẫu nhiên.";
+
+  const payload = {
+    topic: "news",
+    notification: {
+      title: "Tin tức mới!",
+      body: title
+    },
+    data: {
+      type: "news",
+      id: newsId,
+      title: title,
+      content: content
+    }
+  };
+
+  try {
+    await admin.messaging().send(payload);
+    res.status(200).json({
+      message: "Đã gửi thông báo tin tức demo thành công.",
+      data: { id: newsId, title, content }
+    });
+  } catch (error) {
+    console.error("Lỗi gửi FCM:", error);
+    res.status(500).json({ message: "Không thể gửi thông báo." });
   }
 };

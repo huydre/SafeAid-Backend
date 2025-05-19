@@ -24,4 +24,6 @@ router.put('/:news_id', authMiddleware, newsController.updateNews);
 // Xoá tin tức
 router.delete('/:news_id', authMiddleware, newsController.deleteNews);
 
+router.post('/sendNoti', newsController.sendDemoNewsNotification);
+
 module.exports = router;
