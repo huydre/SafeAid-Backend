@@ -6,11 +6,8 @@ const morgan = require('morgan');
 require('dotenv').config();
 const db = require('./config/db');
 const models = require('./models'); 
-<<<<<<< HEAD
 const path = require('path');
 const commentRoutes = require('./routes/commentRoutes');
-=======
->>>>>>> f2f895e (Revert "Merge branch 'feature/tutorial' of https://github.com/huydre/SafeAid-Backend into feature/tutorial")
 
 const guideStepRoutes = require('./routes/guideStepRoutes');
 const guideStepMediaRoutes = require('./routes/guideStepMediaRoutes');
@@ -20,6 +17,8 @@ const firebaseServiceAccount = require("./firebaseServiceAccountKey.json");
 admin.initializeApp({
   credential: admin.credential.cert(firebaseServiceAccount)
 });
+const favouriteGuideListRoutes = require('./routes/favouriteGuideListRoutes');
+const favouriteGuideItemRoutes = require('./routes/favouriteGuideItemRoutes');
 
 const app = express();
 
@@ -42,13 +41,10 @@ const swaggerOptions = require('./config/swaggerOptions');
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-<<<<<<< HEAD
 // Serve thư mục uploads dưới đường dẫn /uploads
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Đồng bộ model với database (nếu cần, chỉ dùng trong development)
-=======
->>>>>>> f2f895e (Revert "Merge branch 'feature/tutorial' of https://github.com/huydre/SafeAid-Backend into feature/tutorial")
 // Đồng bọc model với database (nếu cần, chỉ dùng trong development)
 db.sync()
   .then(() => console.log('All models were synchronized successfully'))
@@ -66,7 +62,6 @@ app.use('/api/posts', require('./routes/likeRoutes'));
 app.use('/api/comments', require('./routes/commentRoutes'));
 app.use('/api/posts/:post_id/comments', commentRoutes);
 
-<<<<<<< HEAD
 app.use('/api/news', require('./routes/newsRoutes'));
 app.use('/api/news/:news_id/comments', require('./routes/newsCommentRoutes'));
 
@@ -89,8 +84,6 @@ app.use('/api/guides/:guide_id/media', require('./routes/guideMediaRoutes'));
 app.use('/api/guide-steps', guideStepRoutes);
 app.use('/api/guide-step-media', guideStepMediaRoutes);
 
-=======
->>>>>>> f2f895e (Revert "Merge branch 'feature/tutorial' of https://github.com/huydre/SafeAid-Backend into feature/tutorial")
 // Thêm route cho guides
 app.use('/api/guides', require('./routes/guideRoutes'));
 
@@ -102,6 +95,9 @@ app.use('/api/guides/:guide_id/media', require('./routes/guideMediaRoutes'));
 
 app.use('/api/guide-steps', guideStepRoutes);
 app.use('/api/guide-step-media', guideStepMediaRoutes);
+
+app.use('/api/favourite-guide-lists', favouriteGuideListRoutes);
+app.use('/api/favourite-guide-items', favouriteGuideItemRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
