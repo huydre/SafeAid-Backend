@@ -1,18 +1,24 @@
 const FavouriteGuideItem = require('../models/favouriteGuideItem.model');
 const FavouriteGuideList = require('../models/favouriteGuideList.model');
 const Guide = require('../models/guide.model');
+const { v4: uuidv4 } = require('uuid');
 
 // Thêm một hướng dẫn vào danh sách yêu thích
 exports.addGuideToFavourite = async (req, res) => {
   try {
     const { guide_id } = req.body;
-    // const user_id = req.user.user_id;
-    const user_id = 1;
+    const user_id = req.user.user_id;
+
+    console.log(user_id);
 
     // Kiểm tra và lấy danh sách yêu thích của người dùng
-    const favouriteList = await FavouriteGuideList.findOne({ where: { user_id } });
+    let favouriteList = await FavouriteGuideList.findOne({ where: { user_id } });
     if (!favouriteList) {
-      return res.status(404).json({ error: 'Không tìm thấy danh sách yêu thích.' });
+      favouriteList = await FavouriteGuideList.create({
+        favlist_id: uuidv4(),
+        user_id,
+        created_at: new Date()
+      });
     }
 
     // Kiểm tra xem hướng dẫn có tồn tại không
@@ -51,8 +57,7 @@ exports.addGuideToFavourite = async (req, res) => {
 exports.removeGuideFromFavourite = async (req, res) => {
   try {
     const { guide_id } = req.params;
-    // const user_id = req.user.user_id;
-    const user_id = 1;
+    const user_id = req.user.user_id;
 
     // Kiểm tra và lấy danh sách yêu thích của người dùng
     const favouriteList = await FavouriteGuideList.findOne({ where: { user_id } });
