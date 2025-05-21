@@ -9,15 +9,15 @@ const NewsMedia = sequelize.define('NewsMedia', {
   },
   media_type: {
     type: DataTypes.STRING(255),
-    allowNull: false
+    allowNull: true
   },
   media_url: {
-    type: DataTypes.STRING(255),
-    allowNull: false
+    type: DataTypes.INTEGER,
+    allowNull: true
   },
   order_index: {
     type: DataTypes.INTEGER,
-    defaultValue: 0
+    allowNull: true
   },
   caption: {
     type: DataTypes.STRING(255),

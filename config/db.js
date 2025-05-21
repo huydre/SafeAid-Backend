@@ -12,13 +12,4 @@ const sequelize = new Sequelize(
   }
 );
 
-// Đồng bộ cơ sở dữ liệu
-sequelize.sync({ alter: true })
-  .then(() => {
-    console.log('Database synchronized.');
-  })
-  .catch((error) => {
-    console.error('Error synchronizing database:', error);
-  });
-
 module.exports = sequelize;
