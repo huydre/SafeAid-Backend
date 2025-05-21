@@ -54,7 +54,7 @@ const User = sequelize.define('User', {
     comment: 'Lần đăng nhập gần nhất'
   },
   profile_image_path: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.STRING(255),
     allowNull: true,
     comment: 'Đường dẫn hoặc ID ảnh đại diện (lưu dạng số?)'
   },

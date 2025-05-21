@@ -14,6 +14,8 @@ const FavouriteGuideItem = require('./favouriteGuideItem.model');
 const GuideCategory = require('./guideCategory.model');
 const GuideMedia = require('./guideMedia.model');
 const Guide = require('./guide.model');
+const Leaderboard = require('./leaderboard.model');
+
 /**
  * Thiết lập Association:
  */
@@ -92,6 +94,8 @@ GuideStep.belongsTo(Guide, { foreignKey: 'guide_id', as: 'guide' });
 GuideStep.hasMany(GuideStepMedia, { foreignKey: 'step_id', as: 'media' });
 GuideStepMedia.belongsTo(GuideStep, { foreignKey: 'step_id', as: 'step' });
 
+User.hasOne(Leaderboard, { foreignKey: 'user_id', as: 'leaderboardEntry' });
+Leaderboard.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
 
 // Export các model sau khi associations đã được thiết lập
 module.exports = {
@@ -109,4 +113,6 @@ module.exports = {
   Guide,
   GuideStep,
   GuideStepMedia,
+  NewsComment,
+  Leaderboard
 };
