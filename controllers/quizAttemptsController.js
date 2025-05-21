@@ -4,6 +4,7 @@ const UserAnswer = require('../models/userAnswer.model');
 const Quiz = require('../models/quizzes.model'); // Import model Quiz
 const Question = require('../models/question.model');
 const Answer = require('../models/answer.model');
+const Leaderboard = require('../models/leaderboard.model');
 
 /**
  * Lấy danh sách QuizAttempts theo user_id, kèm theo thông tin Quiz
@@ -68,6 +69,18 @@ exports.saveQuizAttempt = async (req, res) => {
     }));
 
     await UserAnswer.bulkCreate(userAnswers);
+
+    //cập nhật leaderboard
+    const leaderboardEntry = await Leaderboard.findOne({
+      where: { user_id, quiz_id },
+    });
+    if (leaderboardEntry) {
+      // Nếu đã có entry, chỉ cần cập nhật điểm số nếu điểm mới cao hơn
+      if (score > leaderboardEntry.score) {
+        leaderboardEntry.score = score;
+        await leaderboardEntry.save();
+      }
+    }
 
     return res.status(201).json({
       result: '1',

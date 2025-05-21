@@ -7,6 +7,7 @@ const PostMedia = require('./postMedia.model');
 const News = require('./news.model');
 const NewsMedia = require('./newsMedia.model');
 const NewsComment = require('./newsComment.model');
+const Leaderboard = require('./leaderboard.model');
 
 /**
  * Thiết lập Association:
@@ -60,6 +61,9 @@ NewsComment.hasMany(NewsComment,   { foreignKey:'parent_comment_id', as:'replies
 User.hasMany(NewsComment, { foreignKey:'user_id', as:'newsComments' });
 NewsComment.belongsTo(User, { foreignKey:'user_id', as:'user' });
 
+User.hasOne(Leaderboard, { foreignKey: 'user_id', as: 'leaderboardEntry' });
+Leaderboard.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+
 // Export các model sau khi associations đã được thiết lập
 module.exports = {
   User,
@@ -68,5 +72,7 @@ module.exports = {
   Like,
   PostMedia,
   News, 
-  NewsMedia
+  NewsMedia,
+  NewsComment,
+  Leaderboard
 };
