@@ -111,6 +111,21 @@ exports.getNewsList = async (req, res) => {
       } else {
         obj.thumbnail_url = null;
       }
+
+      const createdAt = new Date(obj.created_at);
+      const timeDiff = Math.floor((Date.now() - createdAt.getTime()) / 1000);
+      let timeAgo;
+      if (timeDiff < 60) {
+        timeAgo = `${timeDiff} giây trước`;
+      } else if (timeDiff < 3600) {
+        timeAgo = `${Math.floor(timeDiff / 60)} phút trước`;
+      } else if (timeDiff < 86400) {
+        timeAgo = `${Math.floor(timeDiff / 3600)} giờ trước`;
+      } else {
+        timeAgo = `${Math.floor(timeDiff / 86400)} ngày trước`;
+      }
+      obj.time_ago = timeAgo;
+
       return obj;
     });
 
