@@ -2,6 +2,8 @@ const { v4: uuidv4 } = require('uuid');
 const Leaderboard = require('../models/leaderboard.model');
 const User = require('../models/User');
 const QuizAttempts = require('../models/quizAttempts.model');
+const Quiz = require('../models/quizzes.model');
+const QuizCategory = require('../models/quizCategory.model');
 const { Op } = require('sequelize');
 const sequelize = require('../config/db');
 
@@ -139,6 +141,92 @@ exports.getUserRank = async (req, res) => {
     // Rank is 1-based
     const rank = higherRanks + 1;
 
+    // Get total quizzes count
+    const totalQuizzes = await Quiz.count();
+
+    // Get all quiz attempts by user to calculate statistics
+    const quizAttempts = await QuizAttempts.findAll({
+      where: { user_id },
+      include: [
+        {
+          model: Quiz,
+          as: 'quiz',
+          attributes: ['quiz_id', 'title', 'category_id'],
+          include: [
+            {
+              model: QuizCategory, 
+              as: 'category',
+              attributes: ['category_id', 'name']
+            }
+          ]
+        }
+      ]
+    });
+
+    // Calculate overall accuracy
+    let totalScore = 0;
+    let totalPossibleScore = 0;
+    const completedQuizIds = new Set();
+    const quizScores = [];
+    const categoryScores = {};
+
+    quizAttempts.forEach(attempt => {
+      const attemptData = attempt.toJSON();
+      totalScore += attemptData.score;
+      totalPossibleScore += attemptData.max_score || 100; // Default to 100 if max_score isn't available
+      completedQuizIds.add(attemptData.quiz_id);
+      
+      // Store per-quiz scores
+      quizScores.push({
+        quiz_id: attemptData.quiz_id,
+        quiz_title: attemptData.quiz?.title || 'Unknown Quiz',
+        score: attemptData.score,
+        max_score: attemptData.max_score || 100,
+        accuracy: Math.round((attemptData.score / (attemptData.max_score || 100)) * 100),
+        completed_at: attemptData.completed_at
+      });
+      
+      // Group by category
+      if (attemptData.quiz?.category) {
+        const categoryId = attemptData.quiz.category.category_id;
+        const categoryName = attemptData.quiz.category.name;
+        
+        if (!categoryScores[categoryId]) {
+          categoryScores[categoryId] = {
+            category_id: categoryId,
+            category_name: categoryName,
+            total_score: 0,
+            total_possible: 0,
+            quiz_count: 0
+          };
+        }
+        
+        categoryScores[categoryId].total_score += attemptData.score;
+        categoryScores[categoryId].total_possible += attemptData.max_score || 100;
+        categoryScores[categoryId].quiz_count += 1;
+      }
+    });
+
+    // Calculate overall accuracy percentage
+    const overallAccuracy = totalPossibleScore > 0 
+      ? Math.round((totalScore / totalPossibleScore) * 100) 
+      : 0;
+
+    // Calculate progress (completed / total)
+    const progress = {
+      completed: completedQuizIds.size,
+      total: totalQuizzes,
+      percentage: Math.round((completedQuizIds.size / totalQuizzes) * 100)
+    };
+    
+    // Format per-category accuracy
+    const categoryAccuracy = Object.values(categoryScores).map(category => ({
+      category_id: category.category_id,
+      category_name: category.category_name,
+      accuracy: Math.round((category.total_score / category.total_possible) * 100),
+      quiz_count: category.quiz_count
+    }));
+
     // Format profile image
     let userData = userEntry.toJSON();
     if (userData.user && userData.user.profile_image_path) {
@@ -147,15 +235,21 @@ exports.getUserRank = async (req, res) => {
 
     return res.status(200).json({
       success: true,
+      user: userData.user,
       rank,
       score: userEntry.score,
-      user: userData.user
+      stats: {
+        overall_accuracy: overallAccuracy,
+        progress,
+        category_accuracy: categoryAccuracy,
+        quiz_scores: quizScores
+      }
     });
   } catch (error) {
-    console.error('Error fetching user rank:', error);
+    console.error('Error fetching user statistics:', error);
     return res.status(500).json({
       success: false,
-      error: 'Đã xảy ra lỗi khi lấy thứ hạng người dùng.'
+      error: 'Đã xảy ra lỗi khi lấy thông tin thống kê người dùng.'
     });
   }
 };
