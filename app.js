@@ -70,6 +70,7 @@ app.use('/api/questions', require('./routes/questionRoutes'));
 app.use('/api/answers', require('./routes/answerRoutes'));
 app.use('/api/quiz-attempts', require('./routes/quizAttemptsRoutes'));
 app.use('/api/user-answers', require('./routes/userAnswerRoutes'));
+app.use('/api/users', require('./routes/userRoutes'));
 
 // Thêm route cho guides
 app.use('/api/guides', require('./routes/guideRoutes'));
@@ -85,6 +86,7 @@ app.use('/api/guide-step-media', guideStepMediaRoutes);
 
 app.use('/api/favourite-guide-lists', favouriteGuideListRoutes);
 app.use('/api/favourite-guide-items', favouriteGuideItemRoutes);
+app.use('/api/leaderboard', require('./routes/leaderboardRoute'));
 
 // Error handling middleware
 app.use((err, req, res, next) => {
