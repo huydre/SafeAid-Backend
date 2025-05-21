@@ -8,6 +8,26 @@ const News = require('./news.model');
 const NewsMedia = require('./newsMedia.model');
 const NewsComment = require('./newsComment.model');
 
+// Import các model mới
+const Answer = require('./answer.model');
+const EmergencyContact = require('./emergencyContact.model');
+const FavouriteGuideList = require('./favouriteGuideList.model');
+const FavouriteGuideItem = require('./favouriteGuideItem.model');
+const GuideCategory = require('./guideCategory.model');
+const GuideMedia = require('./guideMedia.model');
+const Guide = require('./guide.model');
+const Leaderboard = require('./leaderboard.model');
+const News = require('./news.model');
+const NewsMedia = require('./newsMedia.model');
+const Question = require('./question.model');
+const QuizAttempt = require('./quizAttempt.model');
+const QuizCategory = require('./quizCategory.model');
+const Quiz = require('./quiz.model');
+const SOSRequest = require('./sosRequest.model');
+const UserAnswer = require('./userAnswer.model');
+const GuideStep = require('./guideStep.model');
+const GuideStepMedia = require('./guideStepMedia.model');
+
 /**
  * Thiết lập Association:
  */

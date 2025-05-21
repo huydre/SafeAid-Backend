@@ -69,8 +69,17 @@ app.use('/api/answers', require('./routes/answerRoutes'));
 app.use('/api/quiz-attempts', require('./routes/quizAttemptsRoutes'));
 app.use('/api/user-answers', require('./routes/userAnswerRoutes'));
 
-// Các routes khác có thể thêm ở đây...
-// app.use('/api/guides', require('./routes/guideRoutes'));
+// Thêm route cho guides
+app.use('/api/guides', require('./routes/guideRoutes'));
+
+// Thêm route cho guide categories
+app.use('/api/guide-categories', require('./routes/guideCategoryRoutes'));
+
+// Thêm route cho guide media (nested route)
+app.use('/api/guides/:guide_id/media', require('./routes/guideMediaRoutes'));
+
+app.use('/api/guide-steps', guideStepRoutes);
+app.use('/api/guide-step-media', guideStepMediaRoutes);
 
 // Thêm route cho guides
 app.use('/api/guides', require('./routes/guideRoutes'));
