@@ -11,6 +11,8 @@ const commentRoutes = require('./routes/commentRoutes');
 
 const guideStepRoutes = require('./routes/guideStepRoutes');
 const guideStepMediaRoutes = require('./routes/guideStepMediaRoutes');
+const favouriteGuideListRoutes = require('./routes/favouriteGuideListRoutes');
+const favouriteGuideItemRoutes = require('./routes/favouriteGuideItemRoutes');
 const admin = require("firebase-admin");
 const firebaseServiceAccount = require("./firebaseServiceAccountKey.json");
 
@@ -69,9 +71,6 @@ app.use('/api/answers', require('./routes/answerRoutes'));
 app.use('/api/quiz-attempts', require('./routes/quizAttemptsRoutes'));
 app.use('/api/user-answers', require('./routes/userAnswerRoutes'));
 
-// Các routes khác có thể thêm ở đây...
-// app.use('/api/guides', require('./routes/guideRoutes'));
-
 // Thêm route cho guides
 app.use('/api/guides', require('./routes/guideRoutes'));
 
@@ -83,6 +82,9 @@ app.use('/api/guides/:guide_id/media', require('./routes/guideMediaRoutes'));
 
 app.use('/api/guide-steps', guideStepRoutes);
 app.use('/api/guide-step-media', guideStepMediaRoutes);
+
+app.use('/api/favourite-guide-lists', favouriteGuideListRoutes);
+app.use('/api/favourite-guide-items', favouriteGuideItemRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

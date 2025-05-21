@@ -7,7 +7,13 @@ const PostMedia = require('./postMedia.model');
 const News = require('./news.model');
 const NewsMedia = require('./newsMedia.model');
 const NewsComment = require('./newsComment.model');
-
+const GuideStep = require('./guideStep.model');
+const GuideStepMedia = require('./guideStepMedia.model');
+const FavouriteGuideList = require('./favouriteGuideList.model');
+const FavouriteGuideItem = require('./favouriteGuideItem.model');
+const GuideCategory = require('./guideCategory.model');
+const GuideMedia = require('./guideMedia.model');
+const Guide = require('./guide.model');
 /**
  * Thiết lập Association:
  */
@@ -60,6 +66,33 @@ NewsComment.hasMany(NewsComment,   { foreignKey:'parent_comment_id', as:'replies
 User.hasMany(NewsComment, { foreignKey:'user_id', as:'newsComments' });
 NewsComment.belongsTo(User, { foreignKey:'user_id', as:'user' });
 
+// Associations cho Guide và GuideCategory
+GuideCategory.hasMany(Guide, { foreignKey: 'category_id', as: 'guides' });
+Guide.belongsTo(GuideCategory, { foreignKey: 'category_id', as: 'category' });
+
+// Associations cho Guide và GuideMedia
+Guide.hasMany(GuideMedia, { foreignKey: 'guide_id', as: 'media' });
+GuideMedia.belongsTo(Guide, { foreignKey: 'guide_id', as: 'guide' });
+
+// Associations cho FavouriteGuideList và FavouriteGuideItem
+FavouriteGuideList.hasMany(FavouriteGuideItem, { foreignKey: 'favlist_id', as: 'items' });
+FavouriteGuideItem.belongsTo(FavouriteGuideList, { foreignKey: 'favlist_id', as: 'list' });
+
+// Associations cho Guide và FavouriteGuideItem
+Guide.hasMany(FavouriteGuideItem, { foreignKey: 'guide_id', as: 'favourite_items' });
+FavouriteGuideItem.belongsTo(Guide, { foreignKey: 'guide_id', as: 'guide' });
+
+// Associations cho User và FavouriteGuideList
+User.hasMany(FavouriteGuideList, { foreignKey: 'user_id', as: 'favourite_lists' });
+FavouriteGuideList.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+
+Guide.hasMany(GuideStep, { foreignKey: 'guide_id', as: 'steps' });
+GuideStep.belongsTo(Guide, { foreignKey: 'guide_id', as: 'guide' });
+
+GuideStep.hasMany(GuideStepMedia, { foreignKey: 'step_id', as: 'media' });
+GuideStepMedia.belongsTo(GuideStep, { foreignKey: 'step_id', as: 'step' });
+
+
 // Export các model sau khi associations đã được thiết lập
 module.exports = {
   User,
@@ -68,5 +101,12 @@ module.exports = {
   Like,
   PostMedia,
   News, 
-  NewsMedia
+  NewsMedia,
+  FavouriteGuideList,
+  FavouriteGuideItem,
+  GuideCategory,
+  GuideMedia,
+  Guide,
+  GuideStep,
+  GuideStepMedia,
 };
