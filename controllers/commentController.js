@@ -7,20 +7,43 @@ const User = require('../models/User');
 exports.getCommentsByPostId = async (req, res) => {
   try {
     const { post_id } = req.params; // Lấy post_id từ params
+    
+    // Fix: Changed 'getCommentsByPostId' to 'profile_image_path'
     const comments = await Comment.findAll({
       where: { post_id },
       order: [['created_at', 'DESC']], // Sắp xếp theo thời gian tạo mới nhất
       include: [
-        { model: User, as: 'user', attributes: ['user_id','username','profile_image_path'] },
+        { 
+          model: User, 
+          as: 'user', 
+          attributes: ['user_id', 'username', 'profile_image_path']
+        },
       ]
     });
-    if (comments.length === 0) {
-      return res.status(404).json({ message: 'Không tìm thấy comment nào cho bài viết này.' });
-    }
-    res.status(200).json(comments);
+
+    // Format response to include complete URLs for profile images
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    
+    const formattedComments = comments.map(comment => {
+      const plainComment = comment.get({ plain: true });
+      
+      // Format the profile image URL if it exists
+      if (plainComment.user && plainComment.user.profile_image_path) {
+        plainComment.user.profile_image_path = `${baseUrl}/${plainComment.user.profile_image_path.replace(/\\/g, '/')}`;
+      }
+
+      // Also format image_path if your comment has attached images
+      if (plainComment.image_path) {
+        plainComment.image_path = `${baseUrl}/${plainComment.image_path.replace(/\\/g, '/')}`;
+      }
+      
+      return plainComment;
+    });
+    
+    res.status(200).json(formattedComments);
   } catch (error) {
     console.error('Lỗi lấy comment:', error);
-    res.status(500).json({ error: 'Đã có lỗi xảy ra khi lấy comment.' });
+    res.status(500).json({ error: 'Đã có lỗi xảy ra khi lấy comment: ' + error.message });
   }
 };
 
@@ -59,6 +82,12 @@ exports.createComment = async (req, res) => {
     const { post_id } = req.params;    // post_id được truyền qua URL
     const { content } = req.body;
     
+    // Kiểm tra xem người dùng tồn tại không
+    const user = await User.findOne({ where: { user_id } });
+    if (!user) {
+      return res.status(404).json({ error: 'Người dùng không tồn tại.' });
+    }
+
     if (!content) {
       return res.status(400).json({ error: 'Nội dung comment không được để trống.' });
     }
