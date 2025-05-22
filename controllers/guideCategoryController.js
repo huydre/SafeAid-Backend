@@ -9,7 +9,7 @@ exports.getCategories = async (req, res) => {
       include: [{
         model: Guide,
         as: 'guides',
-        attributes: ['guide_id', 'title']
+        attributes: ['guide_id', 'title', 'category_id']
       }]
     });
 

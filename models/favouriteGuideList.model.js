@@ -7,8 +7,8 @@ const FavouriteGuideList = sequelize.define('FavouriteGuideList', {
     primaryKey: true
   },
   created_at: {
-    type: DataTypes.INTEGER,
-    allowNull: true
+    type: DataTypes.DATE,
+    defaultValue: DataTypes.NOW
   },
   user_id: {
     type: DataTypes.STRING(255),

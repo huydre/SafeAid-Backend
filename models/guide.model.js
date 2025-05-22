@@ -39,4 +39,9 @@ const Guide = sequelize.define('Guide', {
   timestamps: false
 });
 
+Guide.hasMany(require('./quiz.model'), {
+  foreignKey: 'guide_id',
+  as: 'quizzes'
+});
+
 module.exports = Guide;

@@ -6,9 +6,9 @@ const Guide = require('../models/guide.model');
 // Lấy danh sách yêu thích của người dùng
 exports.getFavouriteList = async (req, res) => {
   try {
-    // const user_id = req.user.user_id;
+    const user_id = req.user.user_id;
 
-    const user_id = 1;
+    // const user_id = 1;
 
     const favouriteList = await FavouriteGuideList.findOne({
       where: { user_id },
@@ -37,8 +37,8 @@ exports.getFavouriteList = async (req, res) => {
 // Tạo danh sách yêu thích mới cho người dùng
 exports.createFavouriteList = async (req, res) => {
   try {
-    // const user_id = req.user.user_id;
-    const { user_id } = req.body;
+    const user_id = req.user.user_id;
+    // const { user_id } = req.body;
 
     // Kiểm tra xem người dùng đã có danh sách yêu thích chưa
     const existingList = await FavouriteGuideList.findOne({ where: { user_id } });
@@ -50,7 +50,7 @@ exports.createFavouriteList = async (req, res) => {
     const favlist_id = uuidv4();
     const newFavouriteList = await FavouriteGuideList.create({
       favlist_id,
-      created_at: 1,
+      created_at: new Date(),
       user_id,
     });
 

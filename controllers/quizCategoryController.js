@@ -32,6 +32,7 @@ exports.getQuizCategoriesWithQuizzes = async (req, res) => {
             'description',
             'thumbnail_url',
             'duration',
+            'guide_id',
           ], // Chỉ lấy các trường cần thiết
         },
       ],

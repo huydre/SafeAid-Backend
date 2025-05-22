@@ -32,11 +32,24 @@ const Quiz = sequelize.define(
     duration: {
       type: DataTypes.INTEGER,
     },
+    guide_id: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      references: {
+        model: 'Guides', // Tên bảng tham chiếu
+        key: 'guide_id'
+      }
+    }
   },
   {
     tableName: 'Quizzes',
     timestamps: false,
   }
 );
+
+Quiz.belongsTo(require('./guide.model'), {
+  foreignKey: 'guide_id',
+  as: 'guide'
+});
 
 module.exports = Quiz;
