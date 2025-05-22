@@ -11,7 +11,10 @@ router.get('/', guideController.getGuides);
 router.get('/:guide_id', guideController.getGuideById);
 
 // Tạo hướng dẫn mới (yêu cầu đăng nhập và có thể upload ảnh thumbnail)
-router.post('/', authMiddleware, upload.single('thumbnail'), guideController.createGuide);
+router.post('/', authMiddleware, upload.fields([
+    { name: 'thumbnail', maxCount: 1 },
+    { name: 'media', maxCount: 10 }
+  ]), guideController.createGuide);
 
 // Cập nhật hướng dẫn
 router.put('/:guide_id', authMiddleware, upload.single('thumbnail'), guideController.updateGuide);

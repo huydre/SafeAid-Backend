@@ -12,6 +12,7 @@ exports.getGuides = async (req, res) => {
     const offset = (page - 1) * limit;
 
     const whereClause = category_id ? { category_id } : {};
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
 
     const guides = await Guide.findAll({
       where: whereClause,
@@ -32,10 +33,28 @@ exports.getGuides = async (req, res) => {
       ]
     });
 
+    // Xử lý URL cho thumbnail và media
+    const data = guides.map(guide => {
+      const obj = guide.toJSON();
+      // Xử lý thumbnail_url
+      obj.thumbnail_url = obj.thumbnail_path
+        ? `${baseUrl}/${obj.thumbnail_path.replace(/\\/g, '/')}`
+        : null;
+
+      // Xử lý media_url
+      if (Array.isArray(obj.media)) {
+        obj.media.forEach(m => {
+          m.media_url = `${baseUrl}/${m.media_url.replace(/\\/g, '/')}`;
+        });
+      }
+
+      return obj;
+    });
+
     res.json({
       page,
       limit,
-      guides
+      guides: data
     });
   } catch (error) {
     console.error('Lỗi khi lấy danh sách hướng dẫn:', error);
@@ -47,6 +66,7 @@ exports.getGuides = async (req, res) => {
 exports.getGuideById = async (req, res) => {
   try {
     const { guide_id } = req.params;
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
 
     const guide = await Guide.findOne({
       where: { guide_id },
@@ -71,7 +91,19 @@ exports.getGuideById = async (req, res) => {
     // Tăng số lượt xem
     await guide.increment('view_count', { by: 1 });
 
-    res.json(guide);
+    // Xử lý URL cho thumbnail và media
+    const result = guide.toJSON();
+    result.thumbnail_url = result.thumbnail_path
+      ? `${baseUrl}/${result.thumbnail_path.replace(/\\/g, '/')}`
+      : null;
+
+    if (Array.isArray(result.media)) {
+      result.media.forEach(m => {
+        m.media_url = `${baseUrl}/${m.media_url.replace(/\\/g, '/')}`;
+      });
+    }
+
+    res.json(result);
   } catch (error) {
     console.error('Lỗi khi lấy chi tiết hướng dẫn:', error);
     res.status(500).json({ error: 'Đã có lỗi xảy ra khi lấy chi tiết hướng dẫn.' });
@@ -82,7 +114,7 @@ exports.getGuideById = async (req, res) => {
 exports.createGuide = async (req, res) => {
   try {
     const { title, description, category_id } = req.body;
-    const thumbnail_path = req.file ? req.file.path : null;
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
 
     if (!title || !description || !category_id) {
       return res.status(400).json({ error: 'Thiếu thông tin bắt buộc.' });
@@ -92,6 +124,12 @@ exports.createGuide = async (req, res) => {
     const category = await GuideCategory.findByPk(category_id);
     if (!category) {
       return res.status(400).json({ error: 'Danh mục không tồn tại.' });
+    }
+
+    // Lấy thumbnail_path nếu upload
+    let thumbnail_path = null;
+    if (req.files && req.files.thumbnail && req.files.thumbnail.length > 0) {
+      thumbnail_path = req.files.thumbnail[0].path;
     }
 
     const guide_id = uuidv4();
@@ -104,9 +142,30 @@ exports.createGuide = async (req, res) => {
       view_count: 0
     });
 
+    // Xử lý media upload
+    if (req.files && req.files.media) {
+      for (let i = 0; i < req.files.media.length; i++) {
+        const file = req.files.media[i];
+        await GuideMedia.create({
+          media_id: uuidv4(),
+          media_type: file.mimetype,
+          media_url: file.path,
+          order_index: i,
+          caption: file.originalname,
+          guide_id,
+        });
+      }
+    }
+
+    // Build full URL cho response
+    const result = newGuide.toJSON();
+    result.thumbnail_url = result.thumbnail_path
+      ? `${baseUrl}/${result.thumbnail_path.replace(/\\/g, '/')}`
+      : null;
+
     res.status(201).json({
       message: 'Tạo hướng dẫn thành công.',
-      guide: newGuide
+      guide: result
     });
   } catch (error) {
     console.error('Lỗi khi tạo hướng dẫn:', error);
@@ -119,7 +178,7 @@ exports.updateGuide = async (req, res) => {
   try {
     const { guide_id } = req.params;
     const { title, description, category_id } = req.body;
-    const thumbnail_path = req.file ? req.file.path : undefined;
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
 
     const guide = await Guide.findByPk(guide_id);
     if (!guide) {
@@ -133,6 +192,12 @@ exports.updateGuide = async (req, res) => {
       }
     }
 
+    // Xử lý thumbnail nếu có upload mới
+    let thumbnail_path = undefined;
+    if (req.files && req.files.thumbnail && req.files.thumbnail.length > 0) {
+      thumbnail_path = req.files.thumbnail[0].path;
+    }
+
     const updateData = {
       ...(title && { title }),
       ...(description && { description }),
@@ -143,9 +208,52 @@ exports.updateGuide = async (req, res) => {
 
     await guide.update(updateData);
 
+    // Xử lý media mới nếu có
+    if (req.files && req.files.media) {
+      // Xóa media cũ
+      await GuideMedia.destroy({ where: { guide_id } });
+
+      // Thêm media mới
+      for (let i = 0; i < req.files.media.length; i++) {
+        const file = req.files.media[i];
+        await GuideMedia.create({
+          media_id: uuidv4(),
+          guide_id,
+          media_type: file.mimetype,
+          media_url: file.path,
+          order_index: i,
+          caption: file.originalname
+        });
+      }
+    }
+
+    // Lấy guide đã cập nhật kèm media
+    const updatedGuide = await Guide.findOne({
+      where: { guide_id },
+      include: [
+        {
+          model: GuideMedia,
+          as: 'media',
+          attributes: ['media_id', 'media_type', 'media_url', 'caption']
+        }
+      ]
+    });
+
+    // Build full URL cho response
+    const result = updatedGuide.toJSON();
+    result.thumbnail_url = result.thumbnail_path
+      ? `${baseUrl}/${result.thumbnail_path.replace(/\\/g, '/')}`
+      : null;
+
+    if (Array.isArray(result.media)) {
+      result.media.forEach(m => {
+        m.media_url = `${baseUrl}/${m.media_url.replace(/\\/g, '/')}`;
+      });
+    }
+
     res.json({
       message: 'Cập nhật hướng dẫn thành công.',
-      guide: await guide.reload()
+      guide: result
     });
   } catch (error) {
     console.error('Lỗi khi cập nhật hướng dẫn:', error);
