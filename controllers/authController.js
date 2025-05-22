@@ -107,6 +107,38 @@ exports.login = async (req, res) => {
   }
 };
 
+exports.changePassword = async (req, res) => {
+  try {
+    const user_id = req.user.user_id;
+
+    const oldPassword = req.body.oldPassword;
+    const newPassword = req.body.newPassword;
+
+    // Kiểm tra dữ liệu bắt buộc
+    if (!oldPassword || !newPassword) {
+      return res.status(400).json({ error: 'Mật khẩu cũ và mật khẩu mới là bắt buộc.' });
+    }
+    // Tìm người dùng theo user_id
+    const user = await User.findOne({ where: { user_id } });
+    if (!user) {
+      return res.status(404).json({ error: 'Người dùng không tồn tại.' });
+    }
+    // So sánh mật khẩu cũ nhập vào với mật khẩu đã được mã hóa lưu trong CSDL
+    const isPasswordMatch = await bcrypt.compare(oldPassword, user.password);
+    if (!isPasswordMatch) {
+      return res.status(401).json({ error: 'Mật khẩu cũ không chính xác.' });
+    }
+    // Mã hóa mật khẩu mới
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+    // Cập nhật mật khẩu mới
+    await user.update({ password: hashedNewPassword });
+    return res.json({ message: 'Đổi mật khẩu thành công.' });
+  } catch (error) {
+    console.error('Lỗi đổi mật khẩu:', error);
+    return res.status(500).json({ error: 'Đã xảy ra lỗi khi đổi mật khẩu.' });
+  }
+};
+
 exports.resetPassword = async (req, res) => {
   try {
     const { email } = req.body;
