@@ -88,6 +88,8 @@ app.use('/api/favourite-guide-lists', favouriteGuideListRoutes);
 app.use('/api/favourite-guide-items', favouriteGuideItemRoutes);
 app.use('/api/leaderboard', require('./routes/leaderboardRoute'));
 
+app.use('/api/leaderboard', require('./routes/leaderboardRoute'));
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);

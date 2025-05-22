@@ -15,6 +15,7 @@ const GuideCategory = require('./guideCategory.model');
 const GuideMedia = require('./guideMedia.model');
 const Guide = require('./guide.model');
 const Leaderboard = require('./leaderboard.model');
+const Leaderboard = require('./leaderboard.model');
 
 /**
  * Thiết lập Association:

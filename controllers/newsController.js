@@ -77,18 +77,14 @@ exports.getNewsList = async (req, res) => {
     limit = parseInt(limit) || 10;
     const offset = (page - 1) * limit;
 
-    const newsList = await News.findAll({
+    const rows = await News.findAll({
       offset,
       limit,
-      order: [['created_at', 'DESC']],
+      order: [['created_at','DESC']],
       include: [
-        { model: User, as: 'author', attributes: ['user_id', 'username'] },
-        {
-          model: NewsMedia,
-          as: 'media',
-          attributes: ['media_id', 'media_url', 'order_index'],
-        },
-      ],
+        { model: User,      as: 'author', attributes: ['user_id','username'] },
+        { model: NewsMedia, as: 'media',  attributes: ['media_id','media_url','order_index','caption'] }
+      ]
     });
 
     // map JSON để chèn thumbnail_url và chuyển media_url
@@ -140,37 +136,49 @@ exports.getNewsList = async (req, res) => {
  * Lấy chi tiết tin tức theo ID
  */
 exports.getNewsDetail = async (req, res) => {
-  const { news_id } = req.params;
-  // 1. Tăng view_count
-  await News.increment('view_count', { by: 1, where: { news_id } });
+  try {
+    const { news_id } = req.params;
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
 
-  // 2. Lấy detail kèm comments/replies
-  const news = await News.findOne({
-    where: { news_id },
-    include: [
-      { model: User, as: 'author', attributes: ['user_id', 'username'] },
-      { model: NewsMedia, as: 'media', attributes: ['media_id', 'media_url'] },
-      {
-        model: NewsComment,
-        as: 'comments',
-        where: { parent_comment_id: null },
-        required: false,
-        include: [
-          { model: User, as: 'user', attributes: ['user_id', 'username'] },
-          {
-            model: NewsComment,
-            as: 'replies',
-            include: [
-              { model: User, as: 'user', attributes: ['user_id', 'username'] },
-            ],
-          },
-        ],
-      },
-    ],
-  });
+    // tăng view
+    await News.increment('view_count', { by: 1, where: { news_id } });
 
-  if (!news) return res.status(404).json({ error: 'Không tìm thấy tin tức.' });
-  res.json(news);
+    const row = await News.findOne({
+      where: { news_id },
+      include: [
+        { model: User,         as: 'author',  attributes: ['user_id','username'] },
+        { model: NewsMedia,    as: 'media',   attributes: ['media_id','media_url','caption'] },
+        {
+          model: NewsComment, as: 'comments',
+          where: { parent_comment_id: null },
+          required: false,
+          include: [
+            { model: User,       as: 'user',    attributes: ['user_id','username'] },
+            { model: NewsComment, as: 'replies',
+              include: [{ model: User, as: 'user', attributes: ['user_id','username'] }]
+            }
+          ]
+        }
+      ]
+    });
+
+    if (!row) return res.status(404).json({ error: 'Không tìm thấy tin tức.' });
+
+    const news = row.toJSON();
+    news.thumbnail_url = news.thumbnail_path
+      ? `${baseUrl}/${news.thumbnail_path.replace(/\\/g, '/')}`
+      : null;
+    if (Array.isArray(news.media)) {
+      news.media.forEach(m => {
+        m.media_url = `${baseUrl}/${m.media_url.replace(/\\/g, '/')}`;
+      });
+    }
+
+    res.json(news);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Lỗi khi lấy chi tiết tin tức.' });
+  }
 };
 
 /**
@@ -179,18 +187,24 @@ exports.getNewsDetail = async (req, res) => {
 exports.updateNews = async (req, res) => {
   try {
     const { news_id } = req.params;
-    const news = await News.findOne({ where: { news_id } });
-    if (!news)
-      return res.status(404).json({ error: 'Không tìm thấy tin tức.' });
+    const news = await News.findByPk(news_id);
+    if (!news) return res.status(404).json({ error: 'Không tìm thấy tin tức.' });
 
     const { title, content, thumbnail_path } = req.body;
     await news.update({
       title,
       content,
       thumbnail_path,
-      updated_at: new Date(),
+      updated_at: new Date()
     });
-    res.json({ message: 'Cập nhật thành công', news });
+
+    // trả luôn thumbnail_url nếu cần
+    const updated = news.toJSON();
+    updated.thumbnail_url = updated.thumbnail_path
+      ? `${req.protocol}://${req.get('host')}/${updated.thumbnail_path.replace(/\\/g, '/')}`
+      : null;
+
+    res.json({ message: 'Cập nhật thành công', news: updated });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Lỗi khi cập nhật tin tức.' });
@@ -203,10 +217,9 @@ exports.updateNews = async (req, res) => {
 exports.deleteNews = async (req, res) => {
   try {
     const { news_id } = req.params;
-    const news = await News.findOne({ where: { news_id } });
-    if (!news)
-      return res.status(404).json({ error: 'Không tìm thấy tin tức.' });
-    // if (req.user.user_id !== news.author_id) return res.status(403).json({ error: 'Không có quyền.' });
+    const news = await News.findByPk(news_id);
+    if (!news) return res.status(404).json({ error: 'Không tìm thấy tin tức.' });
+
     await news.destroy();
     res.json({ message: 'Xoá tin tức thành công' });
   } catch (err) {
