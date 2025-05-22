@@ -4,7 +4,8 @@ const Notification = require('../models/notification.model');
 // Tạo thông báo
 exports.createNotification = async (req, res) => {
   try {
-    const { user_id, type, ref_id, title, content } = req.body;
+    const user_id = req.user.user_id;
+    const { type, ref_id, title, content } = req.body;
     const notification = await Notification.create({
       notification_id: uuidv4(),
       user_id,

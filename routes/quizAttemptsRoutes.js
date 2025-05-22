@@ -38,7 +38,7 @@ const authMiddleware = require('../middlewares/auth');
  *       500:
  *         description: Lỗi server.
  */
-router.post('/', quizAttemptsController.saveQuizAttempt);
+router.post('/', authMiddleware, quizAttemptsController.saveQuizAttempt);
 
 /**
  * @swagger
