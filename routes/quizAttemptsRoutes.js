@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const quizAttemptsController = require('../controllers/quizAttemptsController');
+const authMiddleware = require('../middlewares/auth');
 
 /**
  * @swagger
@@ -60,7 +61,7 @@ router.post('/', quizAttemptsController.saveQuizAttempt);
  *       500:
  *         description: Lỗi server.
  */
-router.get('/user/:user_id', quizAttemptsController.getQuizAttemptsByUserId);
+router.get('/user', authMiddleware, quizAttemptsController.getQuizAttemptsByUserId);
 
 
 /**
@@ -90,7 +91,7 @@ router.get('/user/:user_id', quizAttemptsController.getQuizAttemptsByUserId);
  *       500:
  *         description: Lỗi server.
  */
-router.get('/:user_id/:quiz_id', quizAttemptsController.getQuizAttemptsByUserIdAndQuizId);
+router.get('/:quiz_id', authMiddleware, quizAttemptsController.getQuizAttemptsByUserIdAndQuizId);
 
 /**
  * @swagger
