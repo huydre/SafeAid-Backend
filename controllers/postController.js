@@ -69,8 +69,8 @@ exports.getPosts = async (req, res) => {
     limit = parseInt(limit) || 10;
     const offset = (page - 1) * limit;
 
-    const host =  process.env.HOST || req.get('host');
-    const baseUrl = `${req.protocol}://${host}:5000`;
+    const host = process.env.HOST || req.get('host');
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
     const currentUserId = req?.user?.user_id;
     console.log('currentUserId:', currentUserId);
 
@@ -81,29 +81,75 @@ exports.getPosts = async (req, res) => {
       include: [
         { model: User, as: 'user', attributes: ['user_id','username','profile_image_path'] },
         { model: PostMedia, as: 'media', attributes: ['postmedia_id','media_type','media_link'] },
-        { model: Comment, as: 'comments', include:[
-            { model: User, as: 'user', attributes: ['user_id','username'] }
+        { 
+          model: Comment, 
+          as: 'comments', 
+          include: [
+            { model: User, as: 'user', attributes: ['user_id','username','profile_image_path'] }
           ]
         },
-        { model: Like, as: 'likes', include:[
-            { model: User, as: 'user', attributes: ['user_id','username'] }
+        { 
+          model: Like, 
+          as: 'likes', 
+          include: [
+            { model: User, as: 'user', attributes: ['user_id','username','profile_image_path'] }
           ]
         }
       ]
     });
 
-    // Chuyển từng instance thành JSON, rồi prefix media_link
+    // Chuyển từng instance thành JSON, rồi format các URL
     const result = posts.map(post => {
       const p = post.toJSON();
 
+      // Check if user liked the post
       p.liked_by_user = currentUserId ? 
         p.likes.some(like => like.user.user_id === currentUserId) : 
         false;
 
+      // Format post creator's profile image
+      if (p.user && p.user.profile_image_path) {
+        p.user.profile_image_path = `${baseUrl}/${p.user.profile_image_path.replace(/\\/g, '/')}`;
+      }
+
+      // Format media URLs
       p.media = p.media.map(m => ({
         ...m,
-        media_link: baseUrl + '/' + m.media_link.replace(/\\/g, '/')
+        media_link: `${baseUrl}/${m.media_link.replace(/\\/g, '/')}`
       }));
+
+      // Format profile images for comment users
+      if (p.comments && p.comments.length) {
+        p.comments = p.comments.map(comment => {
+          if (comment.user && comment.user.profile_image_path) {
+            return {
+              ...comment,
+              user: {
+                ...comment.user,
+                profile_image_path: `${baseUrl}/${comment.user.profile_image_path.replace(/\\/g, '/')}`
+              }
+            };
+          }
+          return comment;
+        });
+      }
+
+      // Format profile images for like users
+      if (p.likes && p.likes.length) {
+        p.likes = p.likes.map(like => {
+          if (like.user && like.user.profile_image_path) {
+            return {
+              ...like,
+              user: {
+                ...like.user,
+                profile_image_path: `${baseUrl}/${like.user.profile_image_path.replace(/\\/g, '/')}`
+              }
+            };
+          }
+          return like;
+        });
+      }
+
       return p;
     });
 

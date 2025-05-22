@@ -52,18 +52,26 @@ exports.updateAvatar = async (req, res) => {
 
 exports.updateUser = async (req, res) => {
     try {
-        const { user_id } = req.user.user_id;
-        const { username, email, phone_number } = req.body;
+        const user_id = req.user.user_id;
+        const username = req.body?.username;
+        const phone_number = req.body?.phone_number;
     
         // Kiểm tra xem người dùng có tồn tại không
         const user = await User.findOne({ where: { user_id } });
         if (!user) {
             return res.status(404).json({ error: 'Người dùng không tồn tại.' });
         }
+
+        // Kiểm tra username đã tồn tại chưa
+        if (username) {
+            const existingUser = await User.findOne({ where: { username } });
+            if (existingUser && existingUser.user_id !== user.user_id) {
+                return res.status(400).json({ error: 'Tên người dùng đã tồn tại.' });
+            }
+        }
     
         // Cập nhật thông tin người dùng
         user.username = username || user.username;
-        user.email = email || user.email;
         user.phone_number = phone_number || user.phone_number;
     
         await user.save();
