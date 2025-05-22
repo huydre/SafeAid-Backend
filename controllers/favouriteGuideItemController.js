@@ -9,7 +9,7 @@ exports.addGuideToFavourite = async (req, res) => {
     const { guide_id } = req.body;
     const user_id = req.user.user_id;
 
-    console.log(user_id);
+    console.log(user_id, guide_id);
 
     // Kiểm tra và lấy danh sách yêu thích của người dùng
     let favouriteList = await FavouriteGuideList.findOne({ where: { user_id } });
