@@ -36,7 +36,8 @@ exports.getQuizAttemptsByUserId = async (req, res) => {
         .json({ error: 'Không tìm thấy QuizAttempts nào cho user_id này.' });
     }
 
-    await updateLeaderboard(user_id, t);
+    // Remove this line - it's causing the error because t is undefined
+    // await updateLeaderboard(user_id, t);
 
     return res.status(200).json({
       quizAttempts: quizAttempts,
