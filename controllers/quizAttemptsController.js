@@ -16,7 +16,7 @@ const User = require('../models/User');
  */
 exports.getQuizAttemptsByUserId = async (req, res) => {
   try {
-    const { user_id } = req.params;
+    const user_id = req.user.user_id; // Lấy từ middleware xác thực
 
     // Lấy danh sách QuizAttempts theo user_id, kèm theo thông tin Quiz
     const quizAttempts = await QuizAttempts.findAll({
@@ -199,7 +199,8 @@ async function updateLeaderboard(user_id, transaction) {
  */
 exports.getQuizAttemptsByUserIdAndQuizId = async (req, res) => {
   try {
-    const { user_id, quiz_id } = req.params;
+    const user_id = req.user.user_id; // Lấy từ middleware xác thực
+    const { quiz_id } = req.params;
 
     // Lấy danh sách QuizAttempts theo user_id và quiz_id, kèm theo thông tin Quiz
     const quizAttempts = await QuizAttempts.findAll({

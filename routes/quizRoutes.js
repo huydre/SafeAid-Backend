@@ -15,5 +15,6 @@ const quizController = require('../controllers/quizController');
  *         description: Lỗi server.
  */
 router.get('/', quizController.getAllQuizzes);
+router.get('/:quiz_id', quizController.getQuizById);
 
 module.exports = router;
