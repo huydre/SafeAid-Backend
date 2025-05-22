@@ -32,3 +32,21 @@ exports.getNotificationsByUser = async (req, res) => {
     res.status(500).json({ error: 'Lỗi khi lấy thông báo' });
   }
 };
+
+exports.markAsRead = async (req, res) => {
+  try {
+    const user_id = req.user.user_id;
+    const { notification_id } = req.params;
+    const notification = await Notification.findOne({
+      where: { notification_id, user_id }
+    });
+    if (!notification) {
+      return res.status(404).json({ error: 'Không tìm thấy thông báo.' });
+    }
+    notification.is_read = true;
+    await notification.save();
+    res.status(200).json({ message: 'Đã đánh dấu là đã đọc.', data: notification });
+  } catch (error) {
+    res.status(500).json({ error: 'Lỗi khi cập nhật thông báo.' });
+  }
+};
