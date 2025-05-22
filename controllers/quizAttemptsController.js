@@ -5,6 +5,11 @@ const Quiz = require('../models/quizzes.model'); // Import model Quiz
 const Question = require('../models/question.model');
 const Answer = require('../models/answer.model');
 const Leaderboard = require('../models/leaderboard.model');
+const sequelize = require('../config/db');
+const { fn, col } = require('sequelize');
+const { Op } = require('sequelize');
+const QuizAttempt = require('../models/quizAttempts.model');
+const User = require('../models/User');
 
 /**
  * Lấy danh sách QuizAttempts theo user_id, kèm theo thông tin Quiz
@@ -31,6 +36,8 @@ exports.getQuizAttemptsByUserId = async (req, res) => {
         .json({ error: 'Không tìm thấy QuizAttempts nào cho user_id này.' });
     }
 
+    await updateLeaderboard(user_id, t);
+
     return res.status(200).json({
       quizAttempts: quizAttempts,
     });
@@ -43,53 +50,148 @@ exports.getQuizAttemptsByUserId = async (req, res) => {
 };
 
 exports.saveQuizAttempt = async (req, res) => {
+  const t = await sequelize.transaction();
   try {
-    const { user_id, quiz_id, score, max_score, duration, answers, completed_at} = req.body;
+    const {
+      user_id,
+      quiz_id,
+      score,
+      max_score,
+      duration,
+      answers,
+      completed_at
+    } = req.body;
 
     const attempt_id = uuidv4();
     const completedAt = completed_at ? new Date(completed_at) : new Date();
 
-    const quizAttempt = await QuizAttempts.create({
+    // 1) Tạo QuizAttempt
+    await QuizAttempt.create({
       attempt_id,
       user_id,
       quiz_id,
       score,
       max_score,
       duration,
-      completed_at: completedAt,
-    });
+      completed_at: completedAt
+    }, { transaction: t });
 
-    // Lưu danh sách UserAnswer
-    const userAnswers = answers.map((answer) => ({
-      user_answer_id: uuidv4(),
-      user_id,
-      question_id: answer.question_id,
-      quiz_attempt_id: attempt_id,
-      selected_answer_id: answer.selected_answer_id,
-    }));
+    // 2) Tạo UserAnswer - FILTER OUT EMPTY SELECTED_ANSWER_ID VALUES
+    const validUserAnswers = answers
+      .filter(a => a.selected_answer_id && a.selected_answer_id.trim() !== '')
+      .map(a => ({
+        user_answer_id: uuidv4(),
+        user_id,
+        question_id: a.question_id,
+        quiz_attempt_id: attempt_id,
+        selected_answer_id: a.selected_answer_id
+      }));
 
-    await UserAnswer.bulkCreate(userAnswers);
-
-    //cập nhật leaderboard
-    const leaderboardEntry = await Leaderboard.findOne({
-      where: { user_id, quiz_id },
-    });
-    if (leaderboardEntry) {
-      // Nếu đã có entry, chỉ cần cập nhật điểm số nếu điểm mới cao hơn
-      if (score > leaderboardEntry.score) {
-        leaderboardEntry.score = score;
-        await leaderboardEntry.save();
-      }
+    // Only insert user answers if there are valid ones
+    if (validUserAnswers.length > 0) {
+      await UserAnswer.bulkCreate(validUserAnswers, { transaction: t });
     }
 
-    return res.status(201).json({
-      result: '1',
-    });
+    // 3) Cập nhật Leaderboard
+    await updateLeaderboard(user_id, t);
+
+    await t.commit();
+    return res.status(201).json({ result: '1' });
   } catch (error) {
+    await t.rollback();
     console.error('Lỗi khi lưu QuizAttempt và UserAnswer:', error);
-    return res.status(500).json({ result: '0' });
+    return res.status(500).json({ 
+      result: '0',
+      error: error.message 
+    });
   }
 };
+
+async function updateLeaderboard(user_id, transaction) {
+  try {
+
+    const userExists = await User.findOne({ 
+      where: { user_id },
+      transaction
+    });
+
+    if (!userExists) {
+      console.warn(`User with ID ${user_id} does not exist in the database. Skipping leaderboard update.`);
+      return; // Exit early - no need to update leaderboard for non-existent user
+    }
+
+    // 1) Best score mỗi quiz
+    const bestScores = await QuizAttempt.findAll({
+      attributes: [
+        'user_id',
+        'quiz_id',
+        [fn('MAX', col('score')), 'bestScore']
+      ],
+      where: { user_id },
+      group: ['quiz_id'],
+      raw: true,
+      transaction
+    });
+
+    // 2) Tính tổng
+    const totalScore = bestScores
+      .reduce((sum, r) => sum + parseInt(r.bestScore || 0, 10), 0);
+
+    // 3) Get current ranking data to determine initial rank
+    const existingEntries = await Leaderboard.findAll({
+      attributes: ['user_id', 'score'],
+      order: [['score', 'DESC']],
+      raw: true,
+      transaction
+    });
+    
+    // Calculate initial rank for this user
+    let initialRank = 1; // Default to 1 if it's the first user
+    
+    if (existingEntries.length > 0) {
+      // Count how many users have higher scores
+      const higherScores = existingEntries.filter(entry => 
+        entry.user_id !== user_id && entry.score > totalScore
+      ).length;
+      
+      initialRank = higherScores + 1;
+    }
+
+    // 3) Upsert Leaderboard entry
+    const [entry, created] = await Leaderboard.findOrCreate({
+      where: { user_id },
+      defaults: {
+        entry_id: uuidv4(),
+        score: totalScore,
+        rank: initialRank, // Include initial rank
+        updated_at: Date.now()
+      },
+      transaction
+    });
+    
+    if (!created) {
+      entry.score = totalScore;
+      entry.rank = initialRank; // Update rank when updating score
+      entry.updated_at = Date.now();
+      await entry.save({ transaction });
+    }
+
+    // 4) Recalculate rank toàn bộ
+    const all = await Leaderboard.findAll({
+      attributes: ['entry_id', 'user_id', 'score'],
+      order: [['score', 'DESC']],
+      transaction
+    });
+    
+    for (let i = 0; i < all.length; i++) {
+      all[i].rank = i + 1;
+      await all[i].save({ transaction });
+    }
+  } catch (error) {
+    console.error('Error in updateLeaderboard:', error);
+    throw error; // Rethrow to be caught by the calling function
+  }
+}
 
 /**
  * Lấy danh sách QuizAttempts theo user_id và quiz_id, kèm theo thông tin Quiz
