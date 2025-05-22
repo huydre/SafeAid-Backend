@@ -3,6 +3,7 @@ const News      = require('../models/news.model');
 const NewsMedia = require('../models/newsMedia.model');
 const User      = require('../models/User');
 const admin = require('firebase-admin');
+const Notification = require('../models/notification.model');
 
 /**
  * Tạo tin tức mới
@@ -46,6 +47,34 @@ exports.createNews = async (req, res) => {
         });
       }
     }
+
+    await Notification.create({
+      notification_id: uuidv4(),
+      user_id: author_id,
+      type: 'news',
+      ref_id: news_id,
+      title: `Tin tức mới: ${title}`,
+      content: content,
+      is_read: false,
+      created_at: new Date()
+    });
+
+    // Bắn notification qua FCM (ví dụ gửi theo topic "news")
+    const payload = {
+      topic: "news",
+      data: {
+        type: "news",
+        title: `Tin tức mới: ${title}`,
+        content: content,
+        ref_id: news_id
+      },
+      android: {
+        priority: "high",
+        ttl: 3600 * 1000
+      }
+    };
+    await admin.messaging().send(payload);
+
 
     // Build full URL cho thumbnail ngay trong response
     const baseUrl = `${req.protocol}://${req.get('host')}`;

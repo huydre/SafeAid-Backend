@@ -10,13 +10,15 @@ const { fn, col } = require('sequelize');
 const { Op } = require('sequelize');
 const QuizAttempt = require('../models/quizAttempts.model');
 const User = require('../models/User');
+const Notification = require('../models/notification.model'); // Thêm dòng này ở đầu file nếu chưa có
+const admin = require('firebase-admin');
 
 /**
  * Lấy danh sách QuizAttempts theo user_id, kèm theo thông tin Quiz
  */
 exports.getQuizAttemptsByUserId = async (req, res) => {
   try {
-    const { user_id } = req.params;
+    const user_id = req.user.user_id; // Lấy từ middleware xác thực
 
     // Lấy danh sách QuizAttempts theo user_id, kèm theo thông tin Quiz
     const quizAttempts = await QuizAttempts.findAll({
@@ -53,9 +55,10 @@ exports.getQuizAttemptsByUserId = async (req, res) => {
 exports.saveQuizAttempt = async (req, res) => {
   const t = await sequelize.transaction();
   try {
+    const user_id = req.user.user_id;
     const {
-      user_id,
       quiz_id,
+      quiz_content,
       score,
       max_score,
       duration,
@@ -95,6 +98,34 @@ exports.saveQuizAttempt = async (req, res) => {
 
     // 3) Cập nhật Leaderboard
     await updateLeaderboard(user_id, t);
+
+    // 4) Tạo Notification
+    await Notification.create({
+      notification_id: uuidv4(),
+      user_id,
+      type: 'exam',
+      ref_id: attempt_id,
+      title: `Đã làm bài thi ${quiz_content}`,
+      content: `Hoàn thành bài lúc ${completedAt.toLocaleString('vi-VN')} với số điểm ${score}/${max_score}`,
+      is_read: false,
+      created_at: completedAt
+    }, { transaction: t });
+
+    const payload = {
+      topic: "news",
+      data: {
+        type: "exam",
+        title: `Đã làm bài thi ${quiz_content}`,
+        content: `Hoàn thành bài lúc ${completedAt.toLocaleString('vi-VN')} với số điểm ${score}/${max_score}`,
+        ref_id: attempt_id
+      },
+      android: {
+        priority: "high", // giúp đẩy noti nhanh
+        ttl: 3600 * 1000 // optional: 1h timeout nếu chưa gửi được
+      }
+    };
+
+    await admin.messaging().send(payload);
 
     await t.commit();
     return res.status(201).json({ result: '1' });
@@ -199,7 +230,8 @@ async function updateLeaderboard(user_id, transaction) {
  */
 exports.getQuizAttemptsByUserIdAndQuizId = async (req, res) => {
   try {
-    const { user_id, quiz_id } = req.params;
+    const user_id = req.user.user_id; // Lấy từ middleware xác thực
+    const { quiz_id } = req.params;
 
     // Lấy danh sách QuizAttempts theo user_id và quiz_id, kèm theo thông tin Quiz
     const quizAttempts = await QuizAttempts.findAll({

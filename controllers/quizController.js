@@ -17,3 +17,24 @@ exports.getAllQuizzes = async (req, res) => {
       .json({ error: 'Đã xảy ra lỗi khi lấy danh sách Quiz.' });
   }
 };
+
+/**
+ * Lấy Quiz theo quiz_id
+ */
+exports.getQuizById = async (req, res) => {
+  try {
+    const { quiz_id } = req.params;
+    const quiz = await Quiz.findByPk(quiz_id);
+    if (!quiz) {
+      return res.status(404).json({ error: 'Không tìm thấy Quiz.' });
+    }
+    return res.status(200).json({
+      quiz: quiz,
+    });
+  } catch (error) {
+    console.error('Lỗi khi lấy Quiz:', error);
+    return res
+      .status(500)
+      .json({ error: 'Đã xảy ra lỗi khi lấy Quiz.' });
+  }
+};
