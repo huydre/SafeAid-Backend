@@ -2,6 +2,7 @@ const { v4: uuidv4 } = require('uuid');
 const Comment = require('../models/comment.model');
 const Post = require('../models/post.model');
 const User = require('../models/User');
+const { calculateTimeAgo } = require('../utils/caculateTimeAgo');
 
 
 exports.getCommentsByPostId = async (req, res) => {
@@ -36,6 +37,8 @@ exports.getCommentsByPostId = async (req, res) => {
       if (plainComment.image_path) {
         plainComment.image_path = `${baseUrl}/${plainComment.image_path.replace(/\\/g, '/')}`;
       }
+
+      plainComment.time_ago = calculateTimeAgo(plainComment.created_at);
       
       return plainComment;
     });

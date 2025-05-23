@@ -7,6 +7,7 @@ const Comment = require('../models/comment.model');
 const Like = require('../models/like.model');
 const PostMedia = require('../models/postMedia.model');
 const { config } = require('dotenv');
+const { calculateTimeAgo } = require('../utils/caculateTimeAgo');
 require('dotenv').config();
 /**
  * Tạo bài viết mới
@@ -33,14 +34,13 @@ exports.createPost = async (req, res) => {
       title: title || null
     });
 
-    // Nếu có file ảnh được upload, lưu thông tin vào bảng PostMedia
     if (req.files && req.files.length > 0) {
       for (const file of req.files) {
         const postmedia_id = uuidv4();
         await PostMedia.create({
           postmedia_id,
           post_id,
-          media_type: 'image', // hoặc 'video'
+          media_type: 'image',
           media_link: file.path,
           user_id: user_id
         });
@@ -57,11 +57,7 @@ exports.createPost = async (req, res) => {
   }
 };
 
-/**
- * Lấy danh sách bài viết với phân trang.
- * Bao gồm thông tin của người viết, danh sách comment (với thông tin người bình luận),
- * danh sách like (với thông tin người thích) và thông tin media (không hiển thị media_link).
- */
+
 exports.getPosts = async (req, res) => {
   try {
     let { page, limit } = req.query;
@@ -98,27 +94,24 @@ exports.getPosts = async (req, res) => {
       ]
     });
 
-    // Chuyển từng instance thành JSON, rồi format các URL
     const result = posts.map(post => {
       const p = post.toJSON();
 
-      // Check if user liked the post
+      p.time_ago = calculateTimeAgo(p.created_at);
+
       p.liked_by_user = currentUserId ? 
         p.likes.some(like => like.user.user_id === currentUserId) : 
         false;
 
-      // Format post creator's profile image
       if (p.user && p.user.profile_image_path) {
         p.user.profile_image_path = `${baseUrl}/${p.user.profile_image_path.replace(/\\/g, '/')}`;
       }
 
-      // Format media URLs
       p.media = p.media.map(m => ({
         ...m,
         media_link: `${baseUrl}/${m.media_link.replace(/\\/g, '/')}`
       }));
 
-      // Format profile images for comment users
       if (p.comments && p.comments.length) {
         p.comments = p.comments.map(comment => {
           if (comment.user && comment.user.profile_image_path) {
@@ -134,7 +127,6 @@ exports.getPosts = async (req, res) => {
         });
       }
 
-      // Format profile images for like users
       if (p.likes && p.likes.length) {
         p.likes = p.likes.map(like => {
           if (like.user && like.user.profile_image_path) {
@@ -160,11 +152,7 @@ exports.getPosts = async (req, res) => {
   }
 };
 
-/**
- * Lấy chi tiết bài viết theo post_id.
- * Bao gồm thông tin của người viết, danh sách comment (với thông tin người bình luận),
- * danh sách like (với thông tin người thích) và thông tin media (không hiển thị media_link).
- */
+
 exports.getPostById = async (req, res) => {
   try {
     const { post_id } = req.params;
@@ -190,7 +178,6 @@ exports.getPostById = async (req, res) => {
       return res.status(404).json({ error: 'Không tìm thấy bài viết.' });
     }
 
-    // Chuyển thành JSON và prefix media_link
     const p = post.toJSON();
     p.media = p.media.map(m => ({
       ...m,
@@ -204,13 +191,7 @@ exports.getPostById = async (req, res) => {
   }
 };
 
-/**
- * Cập nhật bài viết.
- * Yêu cầu:
- *  - post_id trong params.
- *  - Body chứa dữ liệu cập nhật: content và (tùy chọn) title.
- *  - Yêu cầu token xác thực.
- */
+
 exports.updatePost = async (req, res) => {
   try {
     const { post_id } = req.params;
@@ -221,10 +202,6 @@ exports.updatePost = async (req, res) => {
       return res.status(404).json({ error: 'Không tìm thấy bài viết.' });
     }
 
-    // (Tùy chọn): Kiểm tra quyền cập nhật
-    // if (req.user.user_id !== post.user_id) {
-    //   return res.status(403).json({ error: 'Bạn không có quyền cập nhật bài viết này.' });
-    // }
 
     const updatedPost = await post.update({
       content: content || post.content,
@@ -242,12 +219,7 @@ exports.updatePost = async (req, res) => {
   }
 };
 
-/**
- * Xoá bài viết.
- * Yêu cầu:
- *  - post_id trong params.
- *  - Yêu cầu token xác thực.
- */
+
 exports.deletePost = async (req, res) => {
   try {
     const { post_id } = req.params;
@@ -257,10 +229,9 @@ exports.deletePost = async (req, res) => {
       return res.status(404).json({ error: 'Không tìm thấy bài viết.' });
     }
 
-    // (Tùy chọn): Kiểm tra quyền xoá
-    // if (req.user.user_id !== post.user_id) {
-    //   return res.status(403).json({ error: 'Bạn không có quyền xoá bài viết này.' });
-    // }
+    if (req.user.user_id !== post.user_id) {
+      return res.status(403).json({ error: 'Bạn không có quyền xoá bài viết này.' });
+    }
 
     await post.destroy();
     res.json({ message: 'Bài viết đã được xoá thành công.' });
