@@ -15,7 +15,7 @@ const GuideCategory = require('./guideCategory.model');
 const GuideMedia = require('./guideMedia.model');
 const Guide = require('./guide.model');
 const Leaderboard = require('./leaderboard.model');
-
+const PasswordReset = require('./passwordReset.model');
 /**
  * Thiết lập Association:
  */
@@ -97,6 +97,11 @@ GuideStepMedia.belongsTo(GuideStep, { foreignKey: 'step_id', as: 'step' });
 User.hasOne(Leaderboard, { foreignKey: 'user_id', as: 'leaderboardEntry' });
 Leaderboard.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
 
+// Associations cho User và PasswordReset
+User.hasMany(PasswordReset, { foreignKey: 'user_id', as: 'passwordResets' });
+PasswordReset.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+
+
 // Export các model sau khi associations đã được thiết lập
 module.exports = {
   User,
@@ -114,5 +119,6 @@ module.exports = {
   GuideStep,
   GuideStepMedia,
   NewsComment,
-  Leaderboard
+  Leaderboard,
+  PasswordReset
 };

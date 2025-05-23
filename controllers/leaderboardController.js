@@ -1,397 +1,220 @@
-const { v4: uuidv4 } = require('uuid');
-const Leaderboard = require('../models/leaderboard.model');
-const User = require('../models/User');
-const QuizAttempts = require('../models/quizAttempts.model');
-const Quiz = require('../models/quizzes.model');
-const QuizCategory = require('../models/quizCategory.model');
-const { Op } = require('sequelize');
-const sequelize = require('../config/db');
+// controllers/leaderboardController.js
 
-/**
- * Get top leaderboard entries (global leaderboard)
- */
-exports.getGlobalLeaderboard = async (req, res) => {
+const { Op, fn, col, literal } = require('sequelize');
+const QuizAttempt               = require('../models/quizAttempts.model');
+const Quiz                      = require('../models/quizzes.model');
+const UserAnswer                = require('../models/userAnswer.model');
+const sequelize                 = require('../config/db');
+const User                      = require('../models/User');
+const Leaderboard               = require('../models/leaderboard.model');
+
+exports.getMyRank = async (req, res) => {
   try {
-    const { limit = 10 } = req.query;
-    const limitNum = parseInt(limit);
-
-    const leaderboard = await Leaderboard.findAll({
-      limit: limitNum,
-      order: [
-        ['score', 'DESC'], 
-        ['updated_at', 'ASC']
-      ],
-      include: [
-        {
-          model: User,
-          as: 'user',
-          attributes: ['user_id', 'username', 'profile_image_path']
-        }
-      ]
-    });
+    // Get user_id from the authenticated token
+    const user_id = req.user.user_id;
     
-    // Format profile images with complete URLs
-    const formattedLeaderboard = leaderboard.map(entry => {
-      const data = entry.toJSON();
-      if (data.user && data.user.profile_image_path) {
-        data.user.profile_image_path = `${req.protocol}://${req.get('host')}/${data.user.profile_image_path.replace(/\\/g, '/')}`;
-      }
-      return data;
-    });
+    console.log('Getting rank for authenticated user:', user_id);
 
-    return res.status(200).json({
-      success: true,
-      leaderboard: formattedLeaderboard
-    });
-  } catch (error) {
-    console.error('Error fetching global leaderboard:', error);
-    return res.status(500).json({
-      success: false,
-      error: 'Đã xảy ra lỗi khi lấy bảng xếp hạng.'
-    });
-  }
-};
-
-/**
- * Get leaderboard for a specific quiz
- */
-exports.getQuizLeaderboard = async (req, res) => {
-  try {
-    const { quiz_id } = req.params;
-    const { limit = 10 } = req.query;
-    const limitNum = parseInt(limit);
-
-    const leaderboard = await Leaderboard.findAll({
-      where: { quiz_id },
-      limit: limitNum,
-      order: [
-        ['score', 'DESC'], 
-        ['updated_at', 'ASC']
-      ],
-      include: [
-        {
-          model: User,
-          as: 'user',
-          attributes: ['user_id', 'username', 'profile_image_path']
-        }
-      ]
-    });
-
-    // Format profile images with complete URLs
-    const formattedLeaderboard = leaderboard.map(entry => {
-      const data = entry.toJSON();
-      if (data.user && data.user.profile_image_path) {
-        data.user.profile_image_path = `${req.protocol}://${req.get('host')}/${data.user.profile_image_path.replace(/\\/g, '/')}`;
-      }
-      return data;
-    });
-
-    return res.status(200).json({
-      success: true,
-      leaderboard: formattedLeaderboard
-    });
-  } catch (error) {
-    console.error('Error fetching quiz leaderboard:', error);
-    return res.status(500).json({
-      success: false,
-      error: 'Đã xảy ra lỗi khi lấy bảng xếp hạng của bài kiểm tra.'
-    });
-  }
-};
-
-/**
- * Get user's position on leaderboard (global)
- */
-exports.getUserRank = async (req, res) => {
-  try {
-    const { user_id } = req.params;
-
-    // Get user's entry
-    const userEntry = await Leaderboard.findOne({
+    // Lấy thông tin user (bao gồm avatar)
+    const user = await User.findOne({
       where: { user_id },
-      include: [
-        {
-          model: User,
-          as: 'user',
-          attributes: ['username', 'profile_image_path']
-        }
-      ]
+      attributes: ['user_id', 'username', 'profile_image_path'],
+      raw: true
     });
 
-    if (!userEntry) {
-      return res.status(404).json({
+    if (!user) {
+      return res.status(404).json({ 
         success: false,
-        error: 'Người dùng chưa có điểm trên bảng xếp hạng.'
+        error: 'Không tìm thấy thông tin người dùng.'
       });
     }
 
-    // Get count of users with higher scores
-    const higherRanks = await Leaderboard.count({
-      where: {
-        [Op.or]: [
-          { score: { [Op.gt]: userEntry.score } },
-          {
-            score: userEntry.score,
-            updated_at: { [Op.lt]: userEntry.updated_at }
-          }
-        ]
-      }
-    });
+    // Format avatar URL
+    const userAvatar = user.profile_image_path 
+      ? `${req.protocol}://${req.get('host')}/${user.profile_image_path.replace(/\\/g, '/')}` 
+      : null;
 
-    // Rank is 1-based
-    const rank = higherRanks + 1;
-
-    // Get total quizzes count
-    const totalQuizzes = await Quiz.count();
-
-    // Get all quiz attempts by user to calculate statistics
-    const quizAttempts = await QuizAttempts.findAll({
+    // 1) Lấy thông tin từ bảng Leaderboard
+    const leaderboardEntry = await Leaderboard.findOne({
       where: { user_id },
-      include: [
-        {
-          model: Quiz,
-          as: 'quiz',
-          attributes: ['quiz_id', 'title', 'category_id'],
-          include: [
-            {
-              model: QuizCategory, 
-              as: 'category',
-              attributes: ['category_id', 'name']
-            }
-          ]
-        }
-      ]
+      attributes: ['rank', 'score', 'updated_at'],
+      raw: true
     });
 
-    // Calculate overall accuracy
-    let totalScore = 0;
-    let totalPossibleScore = 0;
-    const completedQuizIds = new Set();
-    const quizScores = [];
-    const categoryScores = {};
-
-    quizAttempts.forEach(attempt => {
-      const attemptData = attempt.toJSON();
-      totalScore += attemptData.score;
-      totalPossibleScore += attemptData.max_score || 100; // Default to 100 if max_score isn't available
-      completedQuizIds.add(attemptData.quiz_id);
-      
-      // Store per-quiz scores
-      quizScores.push({
-        quiz_id: attemptData.quiz_id,
-        quiz_title: attemptData.quiz?.title || 'Unknown Quiz',
-        score: attemptData.score,
-        max_score: attemptData.max_score || 100,
-        accuracy: Math.round((attemptData.score / (attemptData.max_score || 100)) * 100),
-        completed_at: attemptData.completed_at
-      });
-      
-      // Group by category
-      if (attemptData.quiz?.category) {
-        const categoryId = attemptData.quiz.category.category_id;
-        const categoryName = attemptData.quiz.category.name;
-        
-        if (!categoryScores[categoryId]) {
-          categoryScores[categoryId] = {
-            category_id: categoryId,
-            category_name: categoryName,
-            total_score: 0,
-            total_possible: 0,
-            quiz_count: 0
-          };
-        }
-        
-        categoryScores[categoryId].total_score += attemptData.score;
-        categoryScores[categoryId].total_possible += attemptData.max_score || 100;
-        categoryScores[categoryId].quiz_count += 1;
-      }
+    // Lấy tổng số người tham gia từ Leaderboard
+    const totalParticipants = await Leaderboard.count();
+    
+    // 2) Tính tổng điểm và tổng max_score của user
+    const bestScores = await QuizAttempt.findAll({
+      attributes: [
+        'quiz_id',
+        [fn('MAX', col('score')), 'bestScore'],
+        [fn('MAX', col('max_score')), 'maxPossibleScore']
+      ],
+      where: { user_id },
+      group: ['quiz_id'],
+      raw: true
     });
 
-    // Calculate overall accuracy percentage
-    const overallAccuracy = totalPossibleScore > 0 
-      ? Math.round((totalScore / totalPossibleScore) * 100) 
+    // Kiểm tra xem user đã làm quiz nào chưa
+    const hasAttemptedQuizzes = bestScores.length > 0;
+
+    // Tính tổng điểm từ các điểm cao nhất
+    const totalScore = bestScores.reduce((sum, item) => sum + parseInt(item.bestScore || 0), 0);
+    const totalMaxScore = bestScores.reduce((sum, item) => sum + parseInt(item.maxPossibleScore || 0), 0);
+    const overallAccuracy = totalMaxScore
+      ? Number((totalScore / totalMaxScore * 100).toFixed(2))
       : 0;
 
-    // Calculate progress (completed / total)
+    // 3) Tính progress: đã làm bao nhiêu quiz / tổng số quiz
+    const totalQuizzes = await Quiz.count();
+    const doneQuizIdsRaw = await QuizAttempt.findAll({
+      where: { user_id },
+      attributes: [[fn('DISTINCT', col('quiz_id')), 'quiz_id']],
+      raw: true
+    });
+    const quizzesDone = doneQuizIdsRaw.length;
     const progress = {
-      completed: completedQuizIds.size,
+      done: quizzesDone,
       total: totalQuizzes,
-      percentage: Math.round((completedQuizIds.size / totalQuizzes) * 100)
+      percentage: totalQuizzes > 0 ? Math.round((quizzesDone / totalQuizzes) * 100) : 0
     };
-    
-    // Format per-category accuracy
-    const categoryAccuracy = Object.values(categoryScores).map(category => ({
-      category_id: category.category_id,
-      category_name: category.category_name,
-      accuracy: Math.round((category.total_score / category.total_possible) * 100),
-      quiz_count: category.quiz_count
-    }));
 
-    // Format profile image
-    let userData = userEntry.toJSON();
-    if (userData.user && userData.user.profile_image_path) {
-      userData.user.profile_image_path = `${req.protocol}://${req.get('host')}/${userData.user.profile_image_path.replace(/\\/g, '/')}`;
-    }
+    // 4) Lấy thông tin chi tiết từng quiz và độ chính xác
+    let accuracyByQuiz = [];
+    
+    // Get all quiz details
+    const quizDetails = await Quiz.findAll({
+      attributes: ['quiz_id', 'title', 'description', 'thumbnail_url', 'category_id'],
+      raw: true
+    });
+
+    // Get user's best scores for each quiz they've taken
+    const byQuiz = await QuizAttempt.findAll({
+      where: { user_id },
+      attributes: [
+        'quiz_id',
+        [fn('MAX', col('score')), 'bestScore'],
+        [fn('MAX', col('max_score')), 'quizMaxScore']
+      ],
+      group: ['quiz_id'],
+      raw: true
+    });
+
+    // Combine quiz details with user's accuracy - only for quizzes they've completed
+    accuracyByQuiz = byQuiz.map(userQuiz => {
+      const quizInfo = quizDetails.find(q => q.quiz_id === userQuiz.quiz_id) || {};
+      const accuracy = userQuiz.quizMaxScore
+        ? Number((userQuiz.bestScore / userQuiz.quizMaxScore * 100).toFixed(2))
+        : 0;
+        
+      return {
+        quiz_id: userQuiz.quiz_id,
+        title: quizInfo.title || 'Unknown Quiz',
+        description: quizInfo.description || '',
+        thumbnail_url: quizInfo.thumbnail_url 
+          ? `${req.protocol}://${req.get('host')}/${quizInfo.thumbnail_url.replace(/\\/g, '/')}` 
+          : null,
+        category_id: quizInfo.category_id,
+        best_score: parseInt(userQuiz.bestScore || 0),
+        max_score: parseInt(userQuiz.quizMaxScore || 0),
+        accuracy: accuracy
+      };
+    });
+
+    // Lấy rank từ Leaderboard hoặc giá trị mặc định
+    const rank = leaderboardEntry ? leaderboardEntry.rank : "N/A";
 
     return res.status(200).json({
       success: true,
-      user: userData.user,
-      rank,
-      score: userEntry.score,
+      user: {
+        user_id,
+        username: user.username,
+        avatar: userAvatar
+      },
       stats: {
+        total_score: leaderboardEntry ? leaderboardEntry.score : totalScore,
         overall_accuracy: overallAccuracy,
         progress,
-        category_accuracy: categoryAccuracy,
-        quiz_scores: quizScores
+        quizzes: accuracyByQuiz,
+        rank,
+        total_participants: totalParticipants,
+        message: !hasAttemptedQuizzes ? 
+          "Hãy hoàn thành một bài kiểm tra để xem thứ hạng của bạn!" : 
+          undefined,
+        has_attempted_quizzes: hasAttemptedQuizzes,
+        last_updated: leaderboardEntry ? 
+          new Date(parseInt(leaderboardEntry.updated_at)).toISOString() : 
+          null
       }
     });
   } catch (error) {
-    console.error('Error fetching user statistics:', error);
-    return res.status(500).json({
+    console.error('Lỗi getMyRank:', error);
+    return res.status(500).json({ 
       success: false,
-      error: 'Đã xảy ra lỗi khi lấy thông tin thống kê người dùng.'
+      error: 'Không thể lấy thông tin xếp hạng: ' + error.message 
     });
   }
 };
 
-/**
- * Update leaderboard after quiz completion
- * This should be called after saving a quiz attempt
- */
-exports.updateLeaderboard = async (req, res) => {
-  const transaction = await sequelize.transaction();
-  
+
+
+exports.getLeaderboard = async (req, res) => {
   try {
-    const { user_id, quiz_id, score } = req.body;
+    let { limit = 10, offset = 0 } = req.query;
+    limit = parseInt(limit);
+    offset = parseInt(offset);
 
-    if (!user_id || !score) {
-      return res.status(400).json({
-        success: false,
-        error: 'Thiếu thông tin cần thiết.'
-      });
-    }
-
-    // Check if user already has an entry for this quiz
-    let entry = await Leaderboard.findOne({
-      where: { 
-        user_id,
-        ...(quiz_id ? { quiz_id } : {})
-      }
-    }, { transaction });
-
-    if (entry) {
-      // Update only if new score is higher
-      if (score > entry.score) {
-        entry.score = score;
-        entry.updated_at = new Date();
-        await entry.save({ transaction });
-      }
-    } else {
-      // Create new entry
-      entry = await Leaderboard.create({
-        entry_id: uuidv4(),
-        user_id,
-        quiz_id,
-        score,
-        rank: 0, // Will be calculated later
-        updated_at: new Date()
-      }, { transaction });
-    }
-
-    // Update ranks for all entries (if global) or for specific quiz
-    const entries = await Leaderboard.findAll({
-      where: quiz_id ? { quiz_id } : {},
-      order: [
-        ['score', 'DESC'],
-        ['updated_at', 'ASC']
-      ]
-    }, { transaction });
-
-    // Update ranks
-    for (let i = 0; i < entries.length; i++) {
-      entries[i].rank = i + 1;
-      await entries[i].save({ transaction });
-    }
-
-    await transaction.commit();
-
-    return res.status(200).json({
-      success: true,
-      message: 'Bảng xếp hạng đã được cập nhật.'
-    });
-  } catch (error) {
-    await transaction.rollback();
-    console.error('Error updating leaderboard:', error);
-    return res.status(500).json({
-      success: false,
-      error: 'Đã xảy ra lỗi khi cập nhật bảng xếp hạng.'
-    });
-  }
-};
-
-/**
- * Recalculate all leaderboard ranks
- * This is an admin-only operation
- */
-exports.recalculateRanks = async (req, res) => {
-  const transaction = await sequelize.transaction();
-  
-  try {
-    // Global leaderboard recalculation
-    const globalEntries = await Leaderboard.findAll({
-      where: { quiz_id: null },
-      order: [
-        ['score', 'DESC'],
-        ['updated_at', 'ASC']
-      ]
-    }, { transaction });
-
-    for (let i = 0; i < globalEntries.length; i++) {
-      globalEntries[i].rank = i + 1;
-      await globalEntries[i].save({ transaction });
-    }
-
-    // Quiz-specific leaderboard recalculation
-    // Get all unique quiz IDs
-    const quizIds = await Leaderboard.findAll({
-      attributes: [[sequelize.fn('DISTINCT', sequelize.col('quiz_id')), 'quiz_id']],
-      where: {
-        quiz_id: {
-          [Op.not]: null
-        }
-      }
+    // 1) Lấy dữ liệu từ bảng Leaderboard (đã sắp xếp theo rank)
+    const leaderboardEntries = await Leaderboard.findAll({
+      attributes: ['user_id', 'score', 'rank', 'updated_at'],
+      order: [['rank', 'ASC']],
+      raw: true
     });
 
-    // For each quiz, recalculate ranks
-    for (const quizIdObj of quizIds) {
-      const quizId = quizIdObj.quiz_id;
+    // 2) Áp dụng phân trang
+    const totalEntries = leaderboardEntries.length;
+    const paged = leaderboardEntries.slice(offset, offset + limit);
+
+    // 3) Lấy thông tin user chi tiết
+    const userIds = paged.map(entry => entry.user_id);
+    
+    const users = await User.findAll({
+      where: { user_id: { [Op.in]: userIds } },
+      attributes: ['user_id', 'username', 'profile_image_path'],
+      raw: true
+    });
+
+    // 4) Kết hợp dữ liệu và thêm đường dẫn avatar
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const data = paged.map(entry => {
+      const user = users.find(u => u.user_id === entry.user_id) || {};
       
-      const quizEntries = await Leaderboard.findAll({
-        where: { quiz_id: quizId },
-        order: [
-          ['score', 'DESC'],
-          ['updated_at', 'ASC']
-        ]
-      }, { transaction });
+      return {
+        rank: entry.rank,
+        user_id: entry.user_id,
+        username: user.username || 'Unknown User',
+        avatar: user.profile_image_path
+          ? `${baseUrl}/${user.profile_image_path.replace(/\\/g, '/')}`
+          : null,
+        total_score: entry.score,
+        last_updated: new Date(parseInt(entry.updated_at)).toISOString()
+      };
+    });
 
-      for (let i = 0; i < quizEntries.length; i++) {
-        quizEntries[i].rank = i + 1;
-        await quizEntries[i].save({ transaction });
-      }
-    }
-
-    await transaction.commit();
-
-    return res.status(200).json({
+    // 5) Trả về kết quả
+    res.json({
       success: true,
-      message: 'Tất cả thứ hạng đã được tính toán lại.'
+      total: totalEntries,
+      limit,
+      offset,
+      data
     });
   } catch (error) {
-    await transaction.rollback();
-    console.error('Error recalculating leaderboard ranks:', error);
-    return res.status(500).json({
+    console.error('Lỗi getLeaderboard:', error);
+    res.status(500).json({
       success: false,
-      error: 'Đã xảy ra lỗi khi tính toán lại thứ hạng.'
+      error: 'Không thể lấy thông tin xếp hạng: ' + error.message
     });
   }
 };

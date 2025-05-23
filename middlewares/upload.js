@@ -1,36 +1,53 @@
-// middlewares/upload.js
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
 
-// Cấu hình lưu file vào thư mục 'uploads/' (bạn cần tạo thư mục này)
+// Create upload directory if it doesn't exist
+const uploadDir = 'uploads/avatars';
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+// Configure storage options
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, 'uploads/');  // hoặc đường dẫn theo mong muốn
+  destination: function (req, file, cb) {
+    cb(null, uploadDir);
   },
-  filename: (req, file, cb) => {
-    // Đặt tên file theo dạng unique (ví dụ: timestamp + original name)
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
+  filename: function (req, file, cb) {
+    // Use the user ID for the filename if available, otherwise use a timestamp
+    const userId = req.user?.user_id ? req.user.user_id : Date.now();
+    const uniqueSuffix = `${userId}-${Date.now()}${path.extname(file.originalname)}`;
+    cb(null, uniqueSuffix);
   }
 });
 
-// Bộ lọc file: chỉ chấp nhận hình ảnh (jpeg, png, gif)
+// Improved file filter with better error handling
 const fileFilter = (req, file, cb) => {
-  const allowedTypes = /jpeg|jpg|png|gif|mp4/;
-  const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-  const mimetype = allowedTypes.test(file.mimetype);
+
+  // Check if the file mimetype indicates it's an image
+  const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/jpg', 'image/webp'];
+
   
-  if (extname && mimetype) {
-    return cb(null, true);
+  if (allowedMimeTypes.includes(file.mimetype.toLowerCase())) {
+    // File is an image, accept it
+    cb(null, true);
   } else {
-    cb(new Error('Chỉ chấp nhận file hình ảnh!'));
+    // File is not an image, reject it with a specific error
+    cb(new Error('Chỉ chấp nhận file hình ảnh! Các định dạng cho phép: JPG, PNG, GIF, WEBP'), false);
   }
 };
 
-const upload = multer({
-  storage,
-  fileFilter,
-  limits: { fileSize: 15 * 1024 * 1024 } // giới hạn file kích thước 5MB
+
+const limits = {
+  fileSize: 5 * 1024 * 1024, // 5MB in bytes
+};
+
+// Create the multer middleware
+const upload = multer({ 
+  storage: storage,
+  fileFilter: fileFilter,
+  limits: limits
+
 });
 
 module.exports = upload;
