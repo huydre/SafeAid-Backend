@@ -19,7 +19,7 @@ router.post(
 router.get('/', newsController.getNewsList);
 
 // Lấy chi tiết tin tức
-router.get('/:news_id', newsController.getNewsDetail);
+router.get('/details/:news_id', newsController.getNewsDetail);
 
 // Cập nhật tin tức
 router.put('/:news_id', authMiddleware, newsController.updateNews);
@@ -28,5 +28,7 @@ router.put('/:news_id', authMiddleware, newsController.updateNews);
 router.delete('/:news_id', authMiddleware, newsController.deleteNews);
 
 router.post('/sendNoti', newsController.sendDemoNewsNotification);
+
+router.get('/search', newsController.searchNews);
 
 module.exports = router;

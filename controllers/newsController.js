@@ -4,6 +4,8 @@ const NewsMedia = require('../models/newsMedia.model');
 const User      = require('../models/User');
 const admin = require('firebase-admin');
 const Notification = require('../models/notification.model');
+const { calculateTimeAgo } = require('../utils/caculateTimeAgo');
+const { Op } = require('sequelize');
 
 /**
  * Tạo tin tức mới
@@ -283,5 +285,88 @@ exports.sendDemoNewsNotification = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ message: "Không thể gửi thông báo." });
+  }
+};
+
+exports.searchNews = async (req, res) => {
+  try {
+    const { keyword, page, limit } = req.query;
+    
+    // Validate keyword
+    if (!keyword || keyword.trim() === '') {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Từ khóa tìm kiếm không được để trống.' 
+      });
+    }
+
+    // Pagination parameters
+    const currentPage = parseInt(page) || 1;
+    const itemsPerPage = parseInt(limit) || 10;
+    const offset = (currentPage - 1) * itemsPerPage;
+    
+    // Base URL for media
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+
+    // Search query with Sequelize
+    const { count, rows } = await News.findAndCountAll({
+      where: {
+        [Op.or]: [
+          { title: { [Op.like]: `%${keyword}%` } },
+          { content: { [Op.like]: `%${keyword}%` } }
+        ]
+      },
+      include: [
+        { model: User, as: 'author', attributes: ['user_id', 'username'] },
+        { model: NewsMedia, as: 'media', attributes: ['media_id', 'media_url', 'order_index', 'caption'] }
+      ],
+      order: [['created_at', 'DESC']],
+      limit: itemsPerPage,
+      offset: offset
+    });
+
+    const results = rows.map(row => {
+      const news = row.toJSON();
+      
+      news.thumbnail_url = news.thumbnail_path
+        ? `${baseUrl}/${news.thumbnail_path.replace(/\\/g, '/')}`
+        : null;
+      
+      if (Array.isArray(news.media)) {
+        news.media.forEach(media => {
+          media.media_url = `${baseUrl}/${media.media_url.replace(/\\/g, '/')}`;
+        });
+      }
+
+      const createdAt = new Date(news.created_at);
+      news.time_ago = calculateTimeAgo(createdAt);
+      
+      return news;
+    });
+
+    // Calculate pagination info
+    const totalPages = Math.ceil(count / itemsPerPage);
+
+    // Return search results with pagination metadata
+    res.status(200).json({
+      success: true,
+      message: `Tìm thấy ${count} kết quả cho từ khóa "${keyword}"`,
+      keyword: keyword,
+      pagination: {
+        total_items: count,
+        total_pages: totalPages,
+        current_page: currentPage,
+        items_per_page: itemsPerPage,
+        has_next_page: currentPage < totalPages,
+        has_previous_page: currentPage > 1
+      },
+      data: results
+    });
+  } catch (error) {
+    console.error('Lỗi khi tìm kiếm tin tức:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Đã xảy ra lỗi khi tìm kiếm tin tức.' 
+    });
   }
 };

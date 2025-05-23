@@ -2,6 +2,7 @@ const { v4: uuidv4 } = require('uuid');
 const Guide = require('../models/guide.model');
 const GuideMedia = require('../models/guideMedia.model');
 const GuideCategory = require('../models/guideCategory.model');
+const { Op } = require('sequelize');
 
 // Lấy danh sách hướng dẫn với phân trang và lọc theo category
 exports.getGuides = async (req, res) => {
@@ -281,5 +282,110 @@ exports.deleteGuide = async (req, res) => {
   } catch (error) {
     console.error('Lỗi khi xóa hướng dẫn:', error);
     res.status(500).json({ error: 'Đã có lỗi xảy ra khi xóa hướng dẫn.' });
+  }
+};
+
+exports.searchGuides = async (req, res) => {
+  try {
+    const { keyword, page, limit, category_id } = req.query;
+    
+    // Validate keyword
+    if (!keyword || keyword.trim() === '') {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Từ khóa tìm kiếm không được để trống.' 
+      });
+    }
+
+    // Pagination parameters
+    const currentPage = parseInt(page) || 1;
+    const itemsPerPage = parseInt(limit) || 10;
+    const offset = (currentPage - 1) * itemsPerPage;
+    
+    // Base URL for media
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+
+    // Build where clause
+    const whereClause = {
+      [Op.or]: [
+        { title: { [Op.like]: `%${keyword}%` } },
+        { description: { [Op.like]: `%${keyword}%` } }
+      ]
+    };
+    
+    // Add category filter if provided
+    if (category_id) {
+      whereClause.category_id = category_id;
+    }
+
+    console.log('Search query params:', { keyword, category_id, currentPage, itemsPerPage });
+
+    // Search query with Sequelize
+    const { count, rows } = await Guide.findAndCountAll({
+      where: whereClause,
+      include: [
+        { 
+          model: GuideCategory, 
+          as: 'category', 
+          attributes: ['category_id', 'name'] 
+        },
+        { 
+          model: GuideMedia, 
+          as: 'media', 
+          attributes: ['media_id', 'media_type', 'media_url', 'caption'] 
+        }
+      ],
+      order: [['created_at', 'DESC']],
+      limit: itemsPerPage,
+      offset: offset
+    });
+
+    console.log(`Found ${count} guide results for keyword "${keyword}"`);
+
+    const results = rows.map(row => {
+      const guide = row.toJSON();
+      
+      // Format thumbnail URL
+      guide.thumbnail_url = guide.thumbnail_path
+        ? `${baseUrl}/${guide.thumbnail_path.replace(/\\/g, '/')}`
+        : null;
+      
+      // Format media URLs
+      if (Array.isArray(guide.media)) {
+        guide.media.forEach(media => {
+          if (media.media_url) {
+            media.media_url = `${baseUrl}/${media.media_url.replace(/\\/g, '/')}`;
+          }
+        });
+      }
+      
+      return guide;
+    });
+
+    // Calculate pagination info
+    const totalPages = Math.ceil(count / itemsPerPage);
+
+    // Return search results with pagination metadata
+    res.status(200).json({
+      success: true,
+      message: `Tìm thấy ${count} kết quả hướng dẫn cho từ khóa "${keyword}"`,
+      keyword: keyword,
+      category_id: category_id || null,
+      pagination: {
+        total_items: count,
+        total_pages: totalPages,
+        current_page: currentPage,
+        items_per_page: itemsPerPage,
+        has_next_page: currentPage < totalPages,
+        has_previous_page: currentPage > 1
+      },
+      guides: results
+    });
+  } catch (error) {
+    console.error('Lỗi khi tìm kiếm hướng dẫn:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Đã xảy ra lỗi khi tìm kiếm hướng dẫn: ' + error.message 
+    });
   }
 };
