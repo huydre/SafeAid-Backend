@@ -4,6 +4,7 @@ const guideController = require('../controllers/guideController');
 const authMiddleware = require('../middlewares/auth');
 const upload = require('../middlewares/upload');
 
+router.get('/search', guideController.searchGuides);
 // Lấy danh sách hướng dẫn
 router.get('/', guideController.getGuides);
 

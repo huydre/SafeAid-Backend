@@ -2,14 +2,13 @@ const User = require('../models/User');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid'); // dùng để sinh UUID cho user_id
+const { sendEmail } = require('../utils/emailService');
+const { PasswordReset } = require('../models');
+const crypto = require('crypto');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'secret_key'; // Lấy JWT secret từ biến môi trường
 
-/**
- * Đăng ký người dùng mới
- *
- * Yêu cầu nhập: username, email, password; phone_number (tùy chọn)
- */
+
 exports.register = async (req, res) => {
   try {
     const { username, email, password, phone_number } = req.body;
@@ -173,7 +172,7 @@ exports.resetPassword = async (req, res) => {
     });
 
     // Tạo link reset password
-    const resetLink = `${APP_URL}/api/auth/reset-password-confirm/${resetToken}`;
+    const resetLink = `http://localhost:5000/api/auth/reset-password-confirm/${resetToken}`;
 
     // Gửi email với link reset password
     const emailSubject = 'Yêu cầu đặt lại mật khẩu - SafeAid App';
