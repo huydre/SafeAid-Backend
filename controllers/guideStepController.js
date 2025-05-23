@@ -1,6 +1,7 @@
 const { v4: uuidv4 } = require('uuid');
 const GuideStep = require('../models/guideStep.model');
 const Guide = require('../models/guide.model');
+const GuideStepMedia = require('../models/guideStepMedia.model');
 
 // Lấy tất cả các bước của một guide
 exports.getStepsByGuideId = async (req, res) => {
@@ -47,13 +48,29 @@ exports.createStep = async (req, res) => {
       return res.status(400).json({ error: 'Guide không tồn tại.' });
     }
 
+    const step_id = uuidv4();
     const step = await GuideStep.create({
-      step_id: uuidv4(),
+      step_id: step_id,
       title,
       content,
       order_index,
       guide_id
     });
+
+    // Xử lý media upload
+    if (req.files && req.files.media) {
+      for (let i = 0; i < req.files.media.length; i++) {
+        const file = req.files.media[i];
+        await GuideStepMedia.create({
+          media_id: uuidv4(),
+          media_type: file.mimetype,
+          media_url: file.path,
+          order_index: i,
+          caption: file.originalname,
+          step_id: step_id,
+        });
+      }
+    }
 
     res.status(201).json(step);
   } catch (error) {

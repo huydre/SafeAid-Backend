@@ -6,17 +6,31 @@ const GuideStep = require('../models/guideStep.model');
 exports.getMediaByStepId = async (req, res) => {
   try {
     const { step_id } = req.params;
-    
-    const media = await GuideStepMedia.findAll({
-      where: { step_id }
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+
+    const mediaList = await GuideStepMedia.findAll({
+      where: { step_id },
+      attributes: ['media_id', 'media_type', 'media_url', 'caption']
     });
 
-    res.json(media);
+    if (!mediaList || mediaList.length === 0) {
+      return res.status(404).json({ error: 'Không tìm thấy media cho bước này.' });
+    }
+
+    // Gắn URL đầy đủ
+    const result = mediaList.map(media => {
+      const obj = media.toJSON();
+      obj.media_url = `${baseUrl}/${obj.media_url.replace(/\\/g, '/')}`;
+      return obj;
+    });
+
+    res.json(result);
   } catch (error) {
-    console.error('Lỗi khi lấy media:', error);
+    console.error('Lỗi khi lấy media theo step_id:', error);
     res.status(500).json({ error: 'Đã có lỗi xảy ra khi lấy media.' });
   }
 };
+
 
 // Lấy chi tiết một media
 exports.getMediaById = async (req, res) => {

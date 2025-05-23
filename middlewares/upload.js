@@ -23,8 +23,10 @@ const storage = multer.diskStorage({
 
 // Improved file filter with better error handling
 const fileFilter = (req, file, cb) => {
+
   // Check if the file mimetype indicates it's an image
   const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/jpg', 'image/webp'];
+
   
   if (allowedMimeTypes.includes(file.mimetype.toLowerCase())) {
     // File is an image, accept it
@@ -35,6 +37,7 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
+
 const limits = {
   fileSize: 5 * 1024 * 1024, // 5MB in bytes
 };
@@ -44,6 +47,7 @@ const upload = multer({
   storage: storage,
   fileFilter: fileFilter,
   limits: limits
+
 });
 
 module.exports = upload;

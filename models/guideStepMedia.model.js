@@ -3,9 +3,8 @@ const sequelize = require('../config/db');
 
 const GuideStepMedia = sequelize.define('GuideStepMedia', {
   media_id: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.STRING(255),
     primaryKey: true,
-    autoIncrement: true
   },
   media_type: {
     type: DataTypes.STRING(255),
